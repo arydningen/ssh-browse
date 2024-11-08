@@ -19,7 +19,7 @@ fi
 mkdir -p "$INSTALL_DIR"
 
 # Copy Python files to the organized directory and make them executable
-FILES=("ssh_browse.py" "ssh_hosts.py" "tmux_split.py")
+FILES=("ssh_browse.py" "ssh_hosts.py" "tmux_split.py" "themes.json")
 for file in "${FILES[@]}"; do
     if [[ -f "$SOURCE_DIR/$file" ]]; then
         cp "$SOURCE_DIR/$file" "$INSTALL_DIR"

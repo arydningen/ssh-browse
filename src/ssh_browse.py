@@ -8,10 +8,16 @@ import tmux_split
 import pwd
 import json
 
-def get_config_location():
+# Wsl2 compatibility
+def get_ssh_config_location():
     id = os.getuid()
     user = pwd.getpwuid(id).pw_name
     return f'/home/{user}/.ssh/config'
+
+def get_config_location():
+    id = os.getuid()
+    user = pwd.getpwuid(id).pw_name
+    return f'/home/{user}/.ssh-browse/config.json'
 
 def get_hosts_to_display(ssh_config_data, selected_category):
     hosts = []
@@ -119,8 +125,18 @@ class Theme:
         return fgcols
 
 def main(stdscr):
+
+    # Load configuration from .ssh-browse file
+    config_file_path = get_config_location()
+    #config_file_path = 'config.json'
+    with open(config_file_path, 'r') as config_file:
+        config = json.load(config_file)
+
+    # Extract settings from the configuration
+    ping_on_startup = config.get('ping_on_startup', 'default_value')
+    
     #theme = Theme('original_theme')
-    theme = Theme('plain_theme')
+    theme = Theme(config.get('theme', 'plain_theme'))
 
     fgcols = theme.init_colors()
     COL_ACTIVE = fgcols['COL_ACTIVE']
@@ -140,9 +156,12 @@ def main(stdscr):
     stdscr.clear()
     command = ''
 
-    config_location = get_config_location()
-    ssh_config_data = ssh_hosts.read_ssh_config(config_location)
-    ssh_hosts.check_reachable_all(ssh_config_data, False)
+    # Uses wsl2 compatible path as default
+    ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
+    ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
+
+    if ping_on_startup == 'true':
+        ssh_hosts.check_reachable_all(ssh_config_data, False)
 
     top_margin, col1_length, col2_length, spacer = 2, 10, 20, 10
     for k in ssh_config_data.keys():
@@ -169,7 +188,7 @@ def main(stdscr):
         render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_ACTIVE, COL_INACTIVE)
         render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
         render_footer(stdscr, size, COL_FOOTER)
-        render_centered_window(stdscr, 'SSH Browse', ['Select a host to connect to', 'Press q to quit', ''], ['good','evil'], 0, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE)
+        #render_centered_window(stdscr, 'SSH Browse', ['Select a host to connect to', 'Press q to quit', ''], ['good','evil'], 0, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE)
 
         stdscr.move(0, 0)
         stdscr.refresh()
@@ -210,6 +229,8 @@ def main(stdscr):
             selected_hosts = []
         elif action == ord('d'):
             tmux_split.demo()
+        elif action == ord('p'):
+            ssh_hosts.check_reachable_all(ssh_config_data, False) 
         elif action == ord('q'):
             break
 
