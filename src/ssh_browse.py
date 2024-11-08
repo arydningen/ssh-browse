@@ -6,6 +6,7 @@ import curses
 import ssh_hosts
 import tmux_split
 import pwd
+import json
 
 def get_config_location():
     id = os.getuid()
@@ -27,12 +28,20 @@ def render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER):
     stdscr.addstr(0, col1_length, 'Properties', COL_HEADER)
     stdscr.addstr(0, col1_length + col2_length + spacer, 'Categories', COL_HEADER)
 
-def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_SELECTION, COL_ARROW):
+def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW):
     for i, host in enumerate(hosts):
-        color = COL_ACTIVE if ssh_config_data[host].get('Reachable') == 'yes' else COL_INACTIVE
+        if ssh_config_data[host].get('Reachable') == 'yes':
+            pretext = 'o '
+            color = COL_ACTIVE
+        elif ssh_config_data[host].get('Reachable') == 'no':
+            pretext = 'x '
+            color = COL_INACTIVE
+        else:
+            pretext = '? '
+            color = COL_UNKNOWN
         if host in selected_hosts:
             color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
-        pretext = 'o ' if color == COL_ACTIVE else 'x '
+
         stdscr.addstr(i + top_margin, 4, pretext + host, color)
         if current_option == i:
             stdscr.addstr(i + top_margin, 1, '->', COL_ARROW)
@@ -57,6 +66,30 @@ def render_footer(stdscr, size, COL_FOOTER):
     stdscr.addstr(size.lines - 2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
     stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
 
+def render_centered_window(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE):
+    size = stdscr.getmaxyx()
+    win_height = len(content) + len(choices) + 4
+    win_width = max(len(title), max(len(line) for line in content), max(len(choice) for choice in choices)) + 4
+    win_y = (size[0] - win_height) // 2
+    win_x = (size[1] - win_width) // 2
+    win_x = 3
+
+    win = curses.newwin(win_height, win_width, win_y, win_x)
+    win.bkgd(' ', COL_WINDOW)
+    win.box()
+
+    win.addstr(1, (win_width - len(title)) // 2, title, COL_TITLE)
+
+    for i, line in enumerate(content):
+        win.addstr(3 + i, 2, line, COL_CONTENT)
+
+    for i, choice in enumerate(choices):
+        color = COL_SELECTED_CHOICE if i == selected_choice else COL_CHOICES
+        win.addstr(3 + len(content) + i, 2, choice, color)
+
+    stdscr.refresh()
+    win.refresh()
+
 def init_colors():
     fgcols = []
     curses.start_color()
@@ -66,39 +99,40 @@ def init_colors():
         fgcols.append(curses.color_pair(i))
     return fgcols
 
-def theme():
-    return {
-        'COL_ACTIVE': (2, -1),
-        'COL_INACTIVE': (1, -1),
-        'COL_HEADER': (57, -1),
-        'COL_ARROW': (7, -1),
-        'COL_PROPERTIES': (7, -1),
-        'COL_SELECTED_CATEGORY': (7, -1),
-        'COL_CATOGORY': (8, -1),
-        'COL_FOOTER': (7, -1),
-        'COL_SELECTION': (93, -1)
-    }
+class Theme:
+    def __init__(self, theme_name='original_theme'):
+        self.theme_name = theme_name
+        self.colors = self.load_theme(theme_name)
 
-def init_colors(theme_colors):
-    fgcols = []
-    curses.start_color()
-    curses.use_default_colors()
-    for index, color in enumerate(theme_colors.values(), start=1):
-        curses.init_pair(index, color[0], color[1])
-        fgcols.append(curses.color_pair(index))
-    return fgcols
+    def load_theme(self, theme_name):
+        with open('themes.json', 'r') as file:
+            themes = json.load(file)
+        return themes.get(theme_name, themes['original_theme'])
 
+    def init_colors(self):
+        fgcols = {}
+        curses.start_color()
+        curses.use_default_colors()
+        for index, (name, color) in enumerate(self.colors.items(), start=1):
+            curses.init_pair(index, color[0], color[1])
+            fgcols[name] = curses.color_pair(index)
+        return fgcols
 
 def main(stdscr):
-    #fgcols = init_colors()
-    #COL_ACTIVE, COL_INACTIVE, COL_HEADER, COL_ARROW, COL_PROPERTIES, COL_SELECTED_CATEGORY, COL_CATOGORY, COL_FOOTER, COL_SELECTION = fgcols[2], fgcols[1] | curses.A_DIM, fgcols[57], fgcols[7], fgcols[7], fgcols[7], fgcols[8], fgcols[7], fgcols[93]
-    #COL_ACTIVE, COL_INACTIVE, COL_HEADER, COL_ARROW, COL_PROPERTIES, COL_SELECTED_CATEGORY, COL_CATOGORY, COL_FOOTER, COL_SELECTION = fgcols[2], fgcols[2] | curses.A_DIM, fgcols[2], fgcols[2], fgcols[2], fgcols[2], fgcols[2], fgcols[2], fgcols[93]
-    theme_colors = theme()
-    fgcols = init_colors(theme_colors)
-    COL_ACTIVE, COL_INACTIVE, COL_HEADER, COL_ARROW, COL_PROPERTIES, COL_SELECTED_CATEGORY, COL_CATOGORY, COL_FOOTER, COL_SELECTION = fgcols[0], fgcols[1] | curses.A_DIM, fgcols[2], fgcols[3], fgcols[4], fgcols[5], fgcols[6], fgcols[7], fgcols[8]
+    #theme = Theme('original_theme')
+    theme = Theme('plain_theme')
 
-
-
+    fgcols = theme.init_colors()
+    COL_ACTIVE = fgcols['COL_ACTIVE']
+    COL_INACTIVE = fgcols['COL_INACTIVE'] # | curses.A_DIM
+    COL_UNKNOWN = fgcols['COL_UNKNOWN']
+    COL_HEADER = fgcols['COL_HEADER']
+    COL_ARROW = fgcols['COL_ARROW']
+    COL_PROPERTIES = fgcols['COL_PROPERTIES']
+    COL_SELECTED_CATEGORY = fgcols['COL_SELECTED_CATEGORY']
+    COL_CATOGORY = fgcols['COL_CATOGORY']
+    COL_FOOTER = fgcols['COL_FOOTER']
+    COL_SELECTION = fgcols['COL_SELECTION']
     curses.curs_set(0)
     curses.noecho()
     curses.cbreak()
@@ -131,10 +165,11 @@ def main(stdscr):
         current_option = min(current_option, len(hosts) - 1)
         scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
 
-        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_SELECTION, COL_ARROW)
+        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
         render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_ACTIVE, COL_INACTIVE)
         render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
         render_footer(stdscr, size, COL_FOOTER)
+        render_centered_window(stdscr, 'SSH Browse', ['Select a host to connect to', 'Press q to quit', ''], ['good','evil'], 0, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE)
 
         stdscr.move(0, 0)
         stdscr.refresh()
