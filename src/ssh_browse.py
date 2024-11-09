@@ -19,6 +19,11 @@ def get_config_location():
     user = pwd.getpwuid(id).pw_name
     return f'/home/{user}/.ssh-browse/config.json'
 
+def get_themes_location():
+    id = os.getuid()
+    user = pwd.getpwuid(id).pw_name
+    return f'/home/{user}/.ssh-browse/themes.json'
+
 def get_hosts_to_display(ssh_config_data, selected_category):
     hosts = []
     for k in ssh_config_data.keys():
@@ -111,7 +116,7 @@ class Theme:
         self.colors = self.load_theme(theme_name)
 
     def load_theme(self, theme_name):
-        with open('themes.json', 'r') as file:
+        with open(get_themes_location(), 'r') as file:
             themes = json.load(file)
         return themes.get(theme_name, themes['original_theme'])
 
@@ -125,7 +130,6 @@ class Theme:
         return fgcols
 
 def main(stdscr):
-
     # Load configuration from .ssh-browse file
     config_file_path = get_config_location()
     #config_file_path = 'config.json'

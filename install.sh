@@ -19,7 +19,7 @@ fi
 mkdir -p "$INSTALL_DIR"
 
 # Copy Python files to the organized directory and make them executable
-FILES=("ssh_browse.py" "ssh_hosts.py" "tmux_split.py" "themes.json")
+FILES=("ssh_browse.py" "ssh_hosts.py" "tmux_split.py")
 for file in "${FILES[@]}"; do
     if [[ -f "$SOURCE_DIR/$file" ]]; then
         cp "$SOURCE_DIR/$file" "$INSTALL_DIR"
@@ -37,6 +37,13 @@ ln -sf "$INSTALL_DIR/ssh_hosts.py" "$BIN_DIR/ssh-hosts"
 echo "Symlinks created:"
 echo "  ssh-browse -> $INSTALL_DIR/ssh_browse.py"
 echo "  ssh-hosts -> $INSTALL_DIR/ssh_hosts.py"
+
+# Copy themes.json and config.json to $HOME/.ssh-browse/
+CONFIG_DIR="$HOME/.ssh-browse"
+mkdir -p "$CONFIG_DIR"
+cp "$SOURCE_DIR/themes.json" "$CONFIG_DIR"
+cp "$SOURCE_DIR/config.json" "$CONFIG_DIR"
+echo "Copied themes.json and config.json to $CONFIG_DIR
 
 echo "Installation complete!"
 echo "Make sure $BIN_DIR is in your PATH if you installed without sudo."
