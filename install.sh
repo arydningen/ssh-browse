@@ -43,7 +43,7 @@ CONFIG_DIR="$HOME/.ssh-browse"
 mkdir -p "$CONFIG_DIR"
 cp "$SOURCE_DIR/themes.json" "$CONFIG_DIR"
 cp "$SOURCE_DIR/config.json" "$CONFIG_DIR"
-echo "Copied themes.json and config.json to $CONFIG_DIR
+echo "Copied themes.json and config.json to $CONFIG_DIR"
 
 echo "Installation complete!"
 echo "Make sure $BIN_DIR is in your PATH if you installed without sudo."
