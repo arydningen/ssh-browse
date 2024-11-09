@@ -4,12 +4,14 @@
 SOURCE_DIR=$(pwd)/src  # assumes install.sh is run from the repo root
 INSTALL_DIR="/usr/local/share/ssh-browse"
 BIN_DIR="/usr/local/bin"
+CONFIG_DIR="$HOME/.ssh-browse"
 
 # Check if running as root (for system-wide install)
 if [[ $EUID -ne 0 ]]; then
    echo "Running without sudo: Installing for the current user only"
    INSTALL_DIR="$HOME/.local/share/ssh-browse"
    BIN_DIR="$HOME/.local/bin"
+   CONFIG_DIR="$HOME/.ssh-browse"
    mkdir -p "$BIN_DIR"
 else
    echo "Running with sudo: Installing system-wide"
@@ -39,7 +41,6 @@ echo "  ssh-browse -> $INSTALL_DIR/ssh_browse.py"
 echo "  ssh-hosts -> $INSTALL_DIR/ssh_hosts.py"
 
 # Copy themes.json and config.json to $HOME/.ssh-browse/
-CONFIG_DIR="$HOME/.ssh-browse"
 mkdir -p "$CONFIG_DIR"
 cp "$SOURCE_DIR/themes.json" "$CONFIG_DIR"
 cp "$SOURCE_DIR/config.json" "$CONFIG_DIR"

@@ -77,7 +77,7 @@ def render_footer(stdscr, size, COL_FOOTER):
     stdscr.addstr(size.lines - 2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
     stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
 
-def render_centered_window(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE):
+def render_centered_window(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE, win=None):
     size = stdscr.getmaxyx()
     win_height = len(content) + len(choices) + 4
     win_width = max(len(title), max(len(line) for line in content), max(len(choice) for choice in choices)) + 4
@@ -85,8 +85,12 @@ def render_centered_window(stdscr, title, content, choices, selected_choice, COL
     win_x = (size[1] - win_width) // 2
     win_x = 3
 
-    win = curses.newwin(win_height, win_width, win_y, win_x)
-    win.bkgd(' ', COL_WINDOW)
+    if win is None:
+        win = curses.newwin(win_height, win_width, win_y, win_x)
+        win.bkgd(' ', COL_WINDOW)
+        win.box()
+
+    win.clear()
     win.box()
 
     win.addstr(1, (win_width - len(title)) // 2, title, COL_TITLE)
@@ -98,8 +102,9 @@ def render_centered_window(stdscr, title, content, choices, selected_choice, COL
         color = COL_SELECTED_CHOICE if i == selected_choice else COL_CHOICES
         win.addstr(3 + len(content) + i, 2, choice, color)
 
-    stdscr.refresh()
-    win.refresh()
+    # stdscr.refresh()
+    # win.refresh()
+    return win
 
 def init_colors():
     fgcols = []
@@ -141,6 +146,9 @@ def main(stdscr):
     
     #theme = Theme('original_theme')
     theme = Theme(config.get('theme', 'plain_theme'))
+
+
+    help_window = None
 
     fgcols = theme.init_colors()
     COL_ACTIVE = fgcols['COL_ACTIVE']
@@ -192,10 +200,13 @@ def main(stdscr):
         render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_ACTIVE, COL_INACTIVE)
         render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
         render_footer(stdscr, size, COL_FOOTER)
-        #render_centered_window(stdscr, 'SSH Browse', ['Select a host to connect to', 'Press q to quit', ''], ['good','evil'], 0, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE)
-
+        # help_window = render_centered_window(stdscr, 'SSH Browse', ['Select a host to connect to', 'Press q to quit', ''], ['good','evil'], 0, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE, help_window)
+        
         stdscr.move(0, 0)
         stdscr.refresh()
+        if help_window:
+            help_window.refresh()
+
         stdscr.timeout(1000)
         action = stdscr.getch()
 
