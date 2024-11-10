@@ -45,7 +45,7 @@ def get_help_text():
         "1-9 - Select a category by number",
         "h - Toggle help",
         "p - Ping the selected host",
-        "a - Ping all hosts to check reachability",
+        "a - Ping all hosts",
         "t - Open selected hosts in tmux",
         "e - View/Edit notes for the selected host",
         "d - Run demo or die",
@@ -104,7 +104,7 @@ def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
     #stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
      
     stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
-    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Unknown: {hosts_unknown}, Offline: {hosts_offline}, Agent: {ssh_agent_running}", COL_FOOTER)
+    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", COL_FOOTER)
 
 def render_centered_panel(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE, panel=None):
     size = stdscr.getmaxyx()
@@ -243,7 +243,7 @@ def main(stdscr):
         stdscr.move(0, 0)
         stdscr.refresh()
 
-        stdscr.timeout(1000)
+        stdscr.timeout(400)
         action = stdscr.getch()
 
         if action == curses.KEY_UP:
