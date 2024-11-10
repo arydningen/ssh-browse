@@ -1,0 +1,75 @@
+{
+    "original_theme": {
+        "COL_ACTIVE": [2, -1],
+        "COL_INACTIVE": [1, -1],
+        "COL_UNKNOWN": [3, -1],
+        "COL_HEADER": [57, -1],
+        "COL_ARROW": [7, -1],
+        "COL_PROPERTIES": [7, -1],
+        "COL_SELECTED_CATEGORY": [7, -1],
+        "COL_CATOGORY": [8, -1],
+        "COL_FOOTER": [7, -1],
+        "COL_SELECTION": [93, -1]
+    },
+    "green_theme": {
+        "COL_ACTIVE": [2, -1],
+        "COL_INACTIVE": [1, -1],
+        "COL_UNKNOWN": [3, -1],
+        "COL_HEADER": [2, -1],
+        "COL_ARROW": [2, -1],
+        "COL_PROPERTIES": [2, -1],
+        "COL_SELECTED_CATEGORY": [2, -1],
+        "COL_CATOGORY": [2, -1],
+        "COL_FOOTER": [2, -1],
+        "COL_SELECTION": [2, -1]
+    },
+    "modern_theme": {
+        "COL_ACTIVE": [10, -1],
+        "COL_INACTIVE": [9, -1],
+        "COL_UNKNOWN": [11, -1],
+        "COL_HEADER": [14, -1],
+        "COL_ARROW": [12, -1],
+        "COL_PROPERTIES": [15, -1],
+        "COL_SELECTED_CATEGORY": [13, -1],
+        "COL_CATOGORY": [8, -1],
+        "COL_FOOTER": [7, -1],
+        "COL_SELECTION": [93, -1]
+    },
+    "plain_theme": {
+        "COL_ACTIVE": [7, -1],
+        "COL_INACTIVE": [8, -1],
+        "COL_UNKNOWN": [7, -1],
+        "COL_HEADER": [7, -1],
+        "COL_ARROW": [7, -1],
+        "COL_PROPERTIES": [7, -1],
+        "COL_SELECTED_CATEGORY": [7, -1],
+        "COL_CATOGORY": [8, -1],
+        "COL_FOOTER": [7, -1],
+        "COL_SELECTION": [7, -1]
+    },
+    "dark_theme": {
+        "COL_ACTIVE": [130, -1],
+        "COL_INACTIVE": [1, -1],
+        "COL_UNKNOWN": [130, -1],
+        "COL_HEADER": [3, -1],
+        "COL_ARROW": [4, -1],
+        "COL_PROPERTIES": [5, -1],
+        "COL_SELECTED_CATEGORY": [6, -1],
+        "COL_CATOGORY": [7, -1],
+        "COL_FOOTER": [8, -1],
+        "COL_SELECTION": [9, -1]
+    },
+    "fun_theme": {
+        "COL_ACTIVE": [5, -1],
+        "COL_INACTIVE": [6, -1],
+        "COL_UNKNOWN": [7, -1],
+        "COL_HEADER": [8, -1],
+        "COL_ARROW": [9, -1],
+        "COL_PROPERTIES": [10, -1],
+        "COL_SELECTED_CATEGORY": [11, -1],
+        "COL_CATOGORY": [12, -1],
+        "COL_FOOTER": [13, -1],
+        "COL_SELECTION": [14, -1]
+    }
+
+}

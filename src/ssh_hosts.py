@@ -43,7 +43,8 @@ def read_ssh_config(filename):
                 # Extract the host name from the line
                 current_host = line.split()[1]
                 current_config = {}
-                current_config['Category'] = current_category
+                current_config['Reachable'] = 'unknown'
+                current_config['Category'] = current_category  
                 if len(aliases) > 0: current_config['Aliases'] = ' '.join(aliases)
             else:
                 # Split the line into key-value pairs
@@ -86,10 +87,10 @@ def check_reachable(config) -> bool:
     command = f'ssh -o BatchMode=yes -o ConnectTimeout=5 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no {ip} 2>&1 | fgrep -q "Permission denied"; echo $?'
     reachable = int(subprocess.check_output(command, shell=True))  
     if (reachable == 0):
-        config['Reachable'] = 'true' 
+        config['Reachable'] = 'yes' 
         return True
     
-    config['Reachable'] = 'false'
+    config['Reachable'] = 'no'
     return False
 
 def check_reachable_all(ssh_config_data, wait):

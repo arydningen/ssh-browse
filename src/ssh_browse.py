@@ -3,257 +3,302 @@ import os
 import subprocess
 import atexit
 import curses
+import curses.panel
 import ssh_hosts
 import tmux_split
 import pwd
+import json
 
-def main(stdscr):
-    # Initialize color pairs
+# Wsl2 compatibility
+def get_ssh_config_location():
+    id = os.getuid()
+    user = pwd.getpwuid(id).pw_name
+    return f'/home/{user}/.ssh/config'
+
+def get_config_location():
+    id = os.getuid()
+    user = pwd.getpwuid(id).pw_name
+    return f'/home/{user}/.ssh-browse/config.json'
+
+def get_themes_location():
+    id = os.getuid()
+    user = pwd.getpwuid(id).pw_name
+    return f'/home/{user}/.ssh-browse/themes.json'
+
+def get_hosts_to_display(ssh_config_data, selected_category):
+    hosts = []
+    for k in ssh_config_data.keys():
+        if selected_category != 'All':
+            if ssh_config_data[k]['Category'] == selected_category:
+                hosts.append(k)
+        else:
+            hosts.append(k)
+    return hosts
+
+def get_help_text():
+    title = "SSH Browse Help"
+    content = [
+        "<enter> - Connect to the selected host",
+        "<space> - Mark/Unmark a host",
+        "Up/Down - Navigate through the hosts",
+        "Left/Right - Change the category",
+        "1-9 - Select a category by number",
+        "h - Toggle help",
+        "p - Ping selected host",
+        "a - Ping all hosts",
+        "t - Open marked hosts in tmux",
+        "e - View/Edit notes for selected host",
+        "d - Run demo or die",
+        "q - Quit the application"
+    ]
+    choices = [" "]
+    selected_choice = 0
+    return title, content, choices, selected_choice
+
+def render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER):
+    stdscr.addstr(0, 4, 'Hosts', COL_HEADER)
+    stdscr.addstr(0, col1_length, 'Properties', COL_HEADER)
+    stdscr.addstr(0, col1_length + col2_length + spacer, 'Categories', COL_HEADER)
+
+def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW):
+    for i, host in enumerate(hosts):
+        if ssh_config_data[host].get('Reachable') == 'yes':
+            pretext = 'o '
+            color = COL_ACTIVE
+        elif ssh_config_data[host].get('Reachable') == 'no':
+            pretext = 'x '
+            color = COL_INACTIVE
+        else:
+            pretext = '? '
+            color = COL_UNKNOWN
+        if host in selected_hosts:
+            color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
+        stdscr.addstr(i + top_margin, 4, pretext + host, color)
+        if current_option == i:
+            stdscr.addstr(i + top_margin, 1, '->', COL_ARROW)
+
+def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES,COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE):
+    hostname = hosts[current_option]
+    selected_host_config = ssh_config_data[hostname]
+    propertylist = list(selected_host_config.keys())
+    valuelist = list(selected_host_config.values())
+    hostcolor = COL_ACTIVE if selected_host_config.get('Reachable') == 'yes' else COL_INACTIVE if selected_host_config.get('Reachable') == 'no' else COL_UNKNOWN
+    stdscr.addstr(0 + top_margin, col1_length, hostname, hostcolor)
+    for i, (prop, val) in enumerate(zip(propertylist, valuelist)):
+        stdscr.addstr(i + 1 + top_margin, col1_length, f'{prop}: {val}', COL_PROPERTIES)
+
+def render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY):
+    selected_host_category = ssh_config_data[hosts[current_option]]['Category']
+    for i, category in enumerate(categories):
+        color = COL_SELECTED_CATEGORY if category == selected_host_category or category == selected_category else COL_CATOGORY
+        stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{i + 1}. {category}', color)
+
+def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
+    number_of_hosts = len(ssh_config_data)
+    ssh_agent_running = 'yes' if os.environ.get('SSH_AUTH_SOCK') else 'no'
+    hosts_online = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'yes'])
+    hosts_offline = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'no'])
+    hosts_unknown = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'unknown'])
+    
+    #stdscr.addstr(size.lines - 2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
+    #stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
+     
+    stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
+    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", COL_FOOTER)
+
+def render_centered_panel(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE, panel=None):
+    size = stdscr.getmaxyx()
+    win_height = len(content) + len(choices) + 4
+    win_width = max(len(title), max(len(line) for line in content), max(len(choice) for choice in choices)) + 4
+    win_y = (size[0] - win_height) // 2
+    win_x = (size[1] - win_width) // 2
+    win_x = 15
+    win_y = 2
+
+    if panel is None:
+        win = curses.newwin(win_height, win_width, win_y, win_x)
+        win.bkgd(' ', COL_WINDOW)
+        win.box()
+        panel = curses.panel.new_panel(win)
+    else:
+        win = panel.window()
+        win.erase()
+        win.box()
+
+    win.addstr(1, (win_width - len(title)) // 2, title, COL_TITLE)
+
+    for i, line in enumerate(content):
+        win.addstr(3 + i, 2, line, COL_CONTENT)
+
+    for i, choice in enumerate(choices):
+        color = COL_SELECTED_CHOICE if i == selected_choice else COL_CHOICES
+        win.addstr(3 + len(content) + i, 2, choice, color)
+
+    #curses.panel.update_panels()
+    #stdscr.refresh()
+    return panel
+
+def init_colors():
     fgcols = []
     curses.start_color()
     curses.use_default_colors()
     for i in range(0, curses.COLORS):
         curses.init_pair(i, i, -1)
         fgcols.append(curses.color_pair(i))
+    return fgcols
 
-    COL_ACTIVE = fgcols[2]
-    COL_INACTIVE = fgcols[1] | curses.A_DIM
-    COL_HEADER = fgcols[57]
-    COL_ARROW = fgcols[7]
-    COL_PROPERTIES = fgcols[7]
-    COL_SELECTED_CATEGORY = fgcols[7]
-    COL_CATOGORY = fgcols[8]
-    COL_FOOTER = fgcols[7]
+class Theme:
+    def __init__(self, theme_name='original_theme'):
+        self.theme_name = theme_name
+        self.colors = self.load_theme(theme_name)
 
-    COL_SELECTION = fgcols[93]
+    def load_theme(self, theme_name):
+        with open(get_themes_location(), 'r') as file:
+            themes = json.load(file)
+        return themes.get(theme_name, themes['original_theme'])
 
+    def init_colors(self):
+        fgcols = {}
+        curses.start_color()
+        curses.use_default_colors()
+        for index, (name, color) in enumerate(self.colors.items(), start=1):
+            curses.init_pair(index, color[0], color[1])
+            fgcols[name] = curses.color_pair(index)
+        return fgcols
+
+# MARK: main
+def main(stdscr):
+    # Load configuration from .ssh-browse file
+    with open(get_config_location(), 'r') as config_file:
+        config = json.load(config_file)
+
+    # Extract settings from the configuration
+    ping_on_startup = config.get('ping_on_startup', 'default_value')
+    theme = Theme(config.get('theme', 'plain_theme'))
+
+    fgcols = theme.init_colors()
+    COL_ACTIVE = fgcols['COL_ACTIVE']
+    COL_INACTIVE = fgcols['COL_INACTIVE'] # | curses.A_DIM
+    COL_UNKNOWN = fgcols['COL_UNKNOWN']
+    COL_HEADER = fgcols['COL_HEADER']
+    COL_ARROW = fgcols['COL_ARROW']
+    COL_PROPERTIES = fgcols['COL_PROPERTIES']
+    COL_SELECTED_CATEGORY = fgcols['COL_SELECTED_CATEGORY']
+    COL_CATOGORY = fgcols['COL_CATOGORY']
+    COL_FOOTER = fgcols['COL_FOOTER']
+    COL_SELECTION = fgcols['COL_SELECTION']
     curses.curs_set(0)
-    curses.noecho() ; curses.cbreak()
+    curses.noecho()
+    curses.cbreak()
 
-    # Clear the screen
     stdscr.clear()
     command = ''
 
-    # Locate config file
-    id = os.getuid()
-    user = pwd.getpwuid(id).pw_name
-    config_location = f'/home/{user}/.ssh/config'
+    help_panel = None
+    help_panel_visible = False
 
-    ssh_config_data = ssh_hosts.read_ssh_config(config_location)
-    ssh_hosts.check_reachable_all(ssh_config_data, False)
+    # Uses wsl2 compatible path as default
+    ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
+    ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
 
-    # Layout helpers
-    top_margin = 2
-    col1_length = 10
-    col2_length = 20
-    spacer = 10
+    if ping_on_startup == 'true':
+        ssh_hosts.check_reachable_all(ssh_config_data, False)
 
-    # Set the length of the host list
+    top_margin, col1_length, col2_length, spacer = 2, 10, 20, 10
     for k in ssh_config_data.keys():
-        if len(k)+spacer>col1_length: col1_length = len(k)+spacer
+        if len(k) + spacer > col1_length:
+            col1_length = len(k) + spacer
 
-    # Set the cursor to the first option
     current_option = 0
-
     categories = ssh_hosts.get_categories(ssh_config_data)
     categories.insert(0, 'All')
-
-    #categories.insert(0,'All')
-    #selected_category = 'All'
-
-    # For TMUX (at least for now)
-    selected_hosts = []
-
-    # For the selected category
     selected_category = 'All'
+    marked_hosts = []
 
-    # Render the window
-    scroll_pos = 0
     while True:
-        # Get the list of hosts to display
-        hosts = []
-        for k in ssh_config_data.keys():
-            if selected_category != 'All':
-                if ssh_config_data[k]['Category'] == selected_category:
-                    hosts.append(k)
-            else:
-                hosts.append(k)
-
-        # Clear the screen
-        # stdscr.clear()
+        hosts = get_hosts_to_display(ssh_config_data, selected_category)
         stdscr.erase()
         size = os.get_terminal_size()
 
-        # Header
-        stdscr.addstr(0, 4, 'Hosts', COL_HEADER) 
-        #stdscr.addstr(0, col1_length, 'Properties', headercolor | curses.A_UNDERLINE | curses.A_BOLD )
-        stdscr.addstr(0, col1_length, 'Properties', COL_HEADER)
-        stdscr.addstr(0, col1_length+col2_length+spacer, 'Categories', COL_HEADER )
+        render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER)
+        max_lines = size.lines - top_margin - 2
+        current_option = min(current_option, len(hosts) - 1)
+        scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
 
-        # Calculate scroll pos
-        footer_length = 2
-
-        # Limit the current option to the number of hosts
-        if current_option >= len(hosts): 
-            current_option = len(hosts)-1
-
-        max_lines = size.lines - top_margin - footer_length
-        if current_option >= max_lines:
-            scroll_pos = (current_option % max_lines) + 1
+        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
+        render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
+        render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
+        render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
+        
+        if help_panel_visible:
+            title, content, choices, selected_choice = get_help_text()
+            help_panel = render_centered_panel(stdscr, title, content, choices, selected_choice, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE, help_panel)
         else:
-            scroll_pos = 0
-        
-        # Render each Host
-        for i in range(min( len(hosts), max_lines )):
-            text = hosts[i + scroll_pos]
-            if ssh_config_data[hosts[i + scroll_pos]].get('Reachable') == 'true':
-                color = COL_ACTIVE
-                if text in selected_hosts:
-                    color = COL_SELECTION
-                pretext = 'o '
-            else:
-                color = COL_INACTIVE
-                if text in selected_hosts:
-                    color = COL_SELECTION | curses.A_DIM               
-                pretext = 'x '                
+            if help_panel:
+                help_panel.hide()
+                help_panel = None
+        curses.panel.update_panels()
 
-            text = pretext + text
-            stdscr.addstr(i+top_margin, 4, text, color)
-            
-            if current_option == i+scroll_pos:
-                text = hosts[i + scroll_pos]
-                stdscr.addstr(i+top_margin, 1, '->', COL_ARROW)
-
-        # Render properties of selected Host
-        hostname = hosts[current_option]
-        selected_host_config = ssh_config_data[hostname]
-        propertylist = list(selected_host_config.keys())
-        valuelist = list(selected_host_config.values())
-
-        hostcolor = COL_INACTIVE
-
-        if 'Reachable' in selected_host_config:
-            if selected_host_config['Reachable'] == 'true': hostcolor = COL_ACTIVE
-        
-        # Selected host
-        stdscr.addstr(0+top_margin, col1_length, hosts[current_option], hostcolor)
-
-        # Host properties
-        for i in range(len(propertylist)):
-            s = propertylist[i] + ': ' + valuelist[i]
-            stdscr.addstr(i+1+top_margin, col1_length, s, COL_PROPERTIES)
-
-        # Render categories
-        selected_host_cateogory = ssh_config_data[hosts[current_option]]['Category']
-        for i in range(len(categories)):
-            s = f'{i+1}. {categories[i]}'
-
-            if categories[i] == selected_host_cateogory: 
-                color = COL_SELECTED_CATEGORY 
-            else: color = COL_CATOGORY
-
-            # Special case for 'All'
-            if categories[i] == 'All':
-                if selected_category == 'All': 
-                    color = COL_SELECTED_CATEGORY
-                else:
-                    color = COL_CATOGORY
-
-            stdscr.addstr(i+top_margin, col1_length+col2_length+(spacer), s, color)
-
-        # Bottom text
-        stdscr.addstr(size.lines-2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
-        stdscr.addstr(size.lines-1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
-        
-
-        # Set cursor resting position
+        # Refresh the screen
         stdscr.move(0, 0)
-
         stdscr.refresh()
-        # Get the user's next action
-        stdscr.timeout(1000)
+
+        stdscr.timeout(400)
         action = stdscr.getch()
 
-        # Move the cursor up
         if action == curses.KEY_UP:
             current_option = max(current_option - 1, 0)
-        # Move the cursor down
         elif action == curses.KEY_DOWN:
             current_option = min(current_option + 1, len(hosts) - 1)
-
-        # Right arrow
         elif action == curses.KEY_RIGHT:
-            if selected_category == None:
-                selected_category = selected_host_cateogory
-            else:
-                category_index = categories.index(selected_category)
-                selected_category = categories[(category_index + 1) % len(categories)]
-
-        # Left arrow
+            category_index = categories.index(selected_category)
+            selected_category = categories[(category_index + 1) % len(categories)]
         elif action == curses.KEY_LEFT:
-            if selected_category == None:
-                selected_category = selected_host_cateogory
-            else:
-                category_index = categories.index(selected_category)
-                selected_category = categories[(category_index - 1) % len(categories)]
-
+            category_index = categories.index(selected_category)
+            selected_category = categories[(category_index - 1) % len(categories)]
         elif action == ord(' '):
             hostname = hosts[current_option]
-            if hostname in selected_hosts:
-                selected_hosts.remove(hostname)              
+            if hostname in marked_hosts:
+                marked_hosts.remove(hostname)
             else:
-                selected_hosts.append(hostname)
-
-        # Select the current option
+                marked_hosts.append(hostname)
         elif action == ord("\n"):
             hostname = hosts[current_option]
             command = f'ssh {hostname}'
             break
-
-        # Edit host notes
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')
-            command = f'{editor} ~/.ssh-browse/{hostname}' 
+            command = f'{editor} ~/.ssh-browse/{hostname}'
             subprocess.run(command, shell=True)
-
             command = 'ssh-browse'
             break
-
-        # Select category
         elif action >= ord('1') and action <= ord('9'):
-            if selected_category == None:
-                if len(categories) > action-ord('1'):
-                    selected_category = categories[action-ord('1')]
-            else:
-                selected_category = None
-                
-        # Tmux
+            selected_category = categories[action - ord('1')]
         elif action == ord('t'):
-            tmux_split.open_ssh_hosts(selected_hosts)
-            selected_hosts = []
-            pass
+            tmux_split.open_ssh_hosts(marked_hosts)
+            marked_hosts = []
         elif action == ord('d'):
             tmux_split.demo()
-            # selected_hosts = []
-            pass
-
-        elif action == ord('e'):
-            command = f'editor {config_location}'
-            break
+        elif action == ord('a'):
+            for host in ssh_config_data:
+                ssh_config_data[host]['Reachable'] = 'unknown'
+            ssh_hosts.check_reachable_all(ssh_config_data, False)
+        elif action == ord('p'):
+            ssh_config_data[hosts[current_option]]['Reachable'] = 'unknown'
+            hostname = hosts[current_option]
+            ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
+        elif action == ord('h'):
+            help_panel_visible = not help_panel_visible 
         elif action == ord('q'):
             break
-    
-    # End program - Restore terminal settings
+
     stdscr.keypad(0)
     curses.curs_set(1)
     curses.echo()
-    curses.nocbreak()        
-    # curses.endwin() # This is not needed when using wrapper
+    curses.nocbreak()
 
-    # Run any command after ending the curse window
-    if command != '':
-        #print(f'Running command: {command}')
+    if command:
         atexit.register(os.system, command)
 
 if __name__ == "__main__":
