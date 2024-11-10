@@ -39,13 +39,13 @@ def get_help_text():
     title = "SSH Browse Help"
     content = [
         "<enter> - Connect to the selected host",
-        "<space> - Mark/Unmark a host",
+        "<space> - Ping the selected host",
         "Up/Down - Navigate through the hosts",
         "Left/Right - Change the category",
         "1-9 - Select a category by number",
         "h - Toggle help",
-        "p - Ping selected host",
         "a - Ping all hosts",
+        "m - Mark/Unmark a host",
         "t - Open marked hosts in tmux",
         "e - View/Edit notes for selected host",
         "d - Run demo or die",
@@ -256,7 +256,7 @@ def main(stdscr):
         elif action == curses.KEY_LEFT:
             category_index = categories.index(selected_category)
             selected_category = categories[(category_index - 1) % len(categories)]
-        elif action == ord(' '):
+        elif action == ord('m'):
             hostname = hosts[current_option]
             if hostname in marked_hosts:
                 marked_hosts.remove(hostname)
@@ -284,7 +284,7 @@ def main(stdscr):
             for host in ssh_config_data:
                 ssh_config_data[host]['Reachable'] = 'unknown'
             ssh_hosts.check_reachable_all(ssh_config_data, False)
-        elif action == ord('p'):
+        elif action == ord(' '):
             ssh_config_data[hosts[current_option]]['Reachable'] = 'unknown'
             hostname = hosts[current_option]
             ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
