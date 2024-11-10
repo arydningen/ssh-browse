@@ -44,7 +44,8 @@ def get_help_text():
         "Left/Right - Change the category",
         "1-9 - Select a category by number",
         "h - Toggle help",
-        "p - Ping all hosts to check reachability",
+        "p - Ping the selected host",
+        "a - Ping all hosts to check reachability",
         "t - Open selected hosts in tmux",
         "e - View/Edit notes for the selected host",
         "d - Run demo or die",
@@ -92,9 +93,18 @@ def render_categories(stdscr, ssh_config_data, hosts, current_option, categories
         color = COL_SELECTED_CATEGORY if category == selected_host_category or category == selected_category else COL_CATOGORY
         stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{i + 1}. {category}', color)
 
-def render_footer(stdscr, size, COL_FOOTER):
-    stdscr.addstr(size.lines - 2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
-    stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
+def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
+    number_of_hosts = len(ssh_config_data)
+    ssh_agent_running = 'yes' if os.environ.get('SSH_AUTH_SOCK') else 'no'
+    hosts_online = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'yes'])
+    hosts_offline = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'no'])
+    hosts_unknown = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'unknown'])
+    
+    #stdscr.addstr(size.lines - 2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
+    #stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
+     
+    stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
+    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Unknown: {hosts_unknown}, Offline: {hosts_offline}, Agent: {ssh_agent_running}", COL_FOOTER)
 
 def render_centered_panel(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE, panel=None):
     size = stdscr.getmaxyx()
@@ -159,9 +169,7 @@ class Theme:
 # MARK: main
 def main(stdscr):
     # Load configuration from .ssh-browse file
-    config_file_path = get_config_location()
-    #config_file_path = 'config.json'
-    with open(config_file_path, 'r') as config_file:
+    with open(get_config_location(), 'r') as config_file:
         config = json.load(config_file)
 
     # Extract settings from the configuration
@@ -220,7 +228,7 @@ def main(stdscr):
         render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
         render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
         render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
-        render_footer(stdscr, size, COL_FOOTER)
+        render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
         
         if help_panel_visible:
             title, content, choices, selected_choice = get_help_text()
@@ -272,8 +280,11 @@ def main(stdscr):
             selected_hosts = []
         elif action == ord('d'):
             tmux_split.demo()
-        elif action == ord('p'):
+        elif action == ord('a'):
             ssh_hosts.check_reachable_all(ssh_config_data, False)
+        elif action == ord('p'):
+            hostname = hosts[current_option]
+            ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
         elif action == ord('h'):
             help_panel_visible = not help_panel_visible 
         elif action == ord('q'):
