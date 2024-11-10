@@ -39,14 +39,14 @@ def get_help_text():
     title = "SSH Browse Help"
     content = [
         "<enter> - Connect to the selected host",
-        "<space> - Select/Deselect a host",
+        "<space> - Mark/Unmark a host",
         "Up/Down - Navigate through the hosts",
         "Left/Right - Change the category",
         "1-9 - Select a category by number",
         "h - Toggle help",
         "p - Ping selected host",
         "a - Ping all hosts",
-        "t - Open selected hosts in tmux",
+        "t - Open marked hosts in tmux",
         "e - View/Edit notes for selected host",
         "d - Run demo or die",
         "q - Quit the application"
@@ -212,8 +212,8 @@ def main(stdscr):
     current_option = 0
     categories = ssh_hosts.get_categories(ssh_config_data)
     categories.insert(0, 'All')
-    selected_hosts = []
     selected_category = 'All'
+    marked_hosts = []
 
     while True:
         hosts = get_hosts_to_display(ssh_config_data, selected_category)
@@ -225,7 +225,7 @@ def main(stdscr):
         current_option = min(current_option, len(hosts) - 1)
         scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
 
-        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
+        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
         render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
         render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
         render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
@@ -258,10 +258,10 @@ def main(stdscr):
             selected_category = categories[(category_index - 1) % len(categories)]
         elif action == ord(' '):
             hostname = hosts[current_option]
-            if hostname in selected_hosts:
-                selected_hosts.remove(hostname)
+            if hostname in marked_hosts:
+                marked_hosts.remove(hostname)
             else:
-                selected_hosts.append(hostname)
+                marked_hosts.append(hostname)
         elif action == ord("\n"):
             hostname = hosts[current_option]
             command = f'ssh {hostname}'
@@ -276,8 +276,8 @@ def main(stdscr):
         elif action >= ord('1') and action <= ord('9'):
             selected_category = categories[action - ord('1')]
         elif action == ord('t'):
-            tmux_split.open_ssh_hosts(selected_hosts)
-            selected_hosts = []
+            tmux_split.open_ssh_hosts(marked_hosts)
+            marked_hosts = []
         elif action == ord('d'):
             tmux_split.demo()
         elif action == ord('a'):
