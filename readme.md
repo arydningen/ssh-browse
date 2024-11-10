@@ -1,4 +1,4 @@
-## ssh-browse v0.5.0
+## SSH Browse v0.5.0
 Utility for browsing ssh hosts in the terminal.
 
 ## Installation
