@@ -12,8 +12,9 @@ To use SSH Browse you need to have:
 
 Optional (extended functionality):
 - `$EDITOR` set in environment paths
-- tmux
-- cmatrix
+- [tmux](https://github.com/tmux/tmux)
+- [cmatrix](https://github.com/abishekvashok/cmatrix)
+
 
 ## Installation
 Navigate to the git repository directory and run:
