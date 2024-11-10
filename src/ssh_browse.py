@@ -44,10 +44,10 @@ def get_help_text():
         "Left/Right - Change the category",
         "1-9 - Select a category by number",
         "h - Toggle help",
-        "p - Ping the selected host",
+        "p - Ping selected host",
         "a - Ping all hosts",
         "t - Open selected hosts in tmux",
-        "e - View/Edit notes for the selected host",
+        "e - View/Edit notes for selected host",
         "d - Run demo or die",
         "q - Quit the application"
     ]
@@ -281,8 +281,11 @@ def main(stdscr):
         elif action == ord('d'):
             tmux_split.demo()
         elif action == ord('a'):
+            for host in ssh_config_data:
+                ssh_config_data[host]['Reachable'] = 'unknown'
             ssh_hosts.check_reachable_all(ssh_config_data, False)
         elif action == ord('p'):
+            ssh_config_data[hosts[current_option]]['Reachable'] = 'unknown'
             hostname = hosts[current_option]
             ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
         elif action == ord('h'):
