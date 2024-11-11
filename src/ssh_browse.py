@@ -35,6 +35,14 @@ def get_hosts_to_display(ssh_config_data, selected_category):
             hosts.append(k)
     return hosts
 
+def get_preview_content(filename):
+    try:
+        with open(filename, 'r') as file:
+            return file.readlines()
+    except FileNotFoundError:
+        return [f'No notes found for {filename}']
+        #return [f'No notes found']
+
 def get_help_text():
     title = "SSH Browse Help"
     content = [
@@ -106,14 +114,14 @@ def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
     stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
     stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", COL_FOOTER)
 
-def render_centered_panel(stdscr, title, content, choices, selected_choice, COL_WINDOW, COL_TITLE, COL_CONTENT, COL_CHOICES, COL_SELECTED_CHOICE, panel=None):
+def render_custom_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT, panel=None):
     size = stdscr.getmaxyx()
-    win_height = len(content) + len(choices) + 4
-    win_width = max(len(title), max(len(line) for line in content), max(len(choice) for choice in choices)) + 4
+    win_height = len(content) + 4
+    win_width = max(len(title), max(len(line) for line in content)) + 4
     win_y = (size[0] - win_height) // 2
     win_x = (size[1] - win_width) // 2
     win_x = 15
-    win_y = 2
+    win_y = 1
 
     if panel is None:
         win = curses.newwin(win_height, win_width, win_y, win_x)
@@ -130,12 +138,40 @@ def render_centered_panel(stdscr, title, content, choices, selected_choice, COL_
     for i, line in enumerate(content):
         win.addstr(3 + i, 2, line, COL_CONTENT)
 
-    for i, choice in enumerate(choices):
-        color = COL_SELECTED_CHOICE if i == selected_choice else COL_CHOICES
-        win.addstr(3 + len(content) + i, 2, choice, color)
+    return panel
 
-    #curses.panel.update_panels()
-    #stdscr.refresh()
+def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT,x, width, height, panel=None):
+    size = stdscr.getmaxyx()
+    win_height = height
+    win_width = width   # Fixed width
+    win_y = 1
+    win_x = x
+
+    if panel is None:
+        win = curses.newwin(win_height, win_width, win_y, win_x)
+        win.bkgd(' ', COL_WINDOW)
+        win.box()
+        panel = curses.panel.new_panel(win)
+    else:
+        win = panel.window()
+        win.erase()
+        win.box()
+
+    win.addstr(1, (win_width - len(title)) // 2, title, COL_TITLE)
+
+    # Cut lines to fit the window width
+    wrapped_content = []
+    for line in content:
+        while len(line) > win_width - 4:
+            wrapped_content.append(line[:win_width - 4])
+            line = line[win_width - 4:]
+        wrapped_content.append(line)
+
+    for i, line in enumerate(wrapped_content[:win_height - 4]):
+        win.addstr(3 + i, 2, line, COL_CONTENT)
+
+    win.box()
+    
     return panel
 
 def init_colors():
@@ -197,6 +233,10 @@ def main(stdscr):
     help_panel = None
     help_panel_visible = False
 
+    preview_panel = None
+    preview_panel_visible = False
+    preview_content = []
+    
     # Uses wsl2 compatible path as default
     ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
     ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
@@ -219,6 +259,7 @@ def main(stdscr):
         hosts = get_hosts_to_display(ssh_config_data, selected_category)
         stdscr.erase()
         size = os.get_terminal_size()
+        last_option = current_option
 
         render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER)
         max_lines = size.lines - top_margin - 2
@@ -232,11 +273,21 @@ def main(stdscr):
         
         if help_panel_visible:
             title, content, choices, selected_choice = get_help_text()
-            help_panel = render_centered_panel(stdscr, title, content, choices, selected_choice, COL_ACTIVE, COL_HEADER, COL_ACTIVE, COL_ACTIVE, COL_ACTIVE, help_panel)
+            help_panel = render_custom_panel(stdscr, title, content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, help_panel)
         else:
             if help_panel:
                 help_panel.hide()
                 help_panel = None
+        
+        if preview_panel_visible:
+            win_length = size.columns - col1_length
+            win_height = size.lines - 4
+            preview_panel = render_preview_panel(stdscr, "Preview", preview_content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, col1_length, win_length, win_height, preview_panel)
+        else:
+            if preview_panel:
+                preview_panel.hide()
+                preview_panel = None
+
         curses.panel.update_panels()
 
         # Refresh the screen
@@ -269,8 +320,8 @@ def main(stdscr):
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')
-            note_dir = config.get('note_dir', '~/.ssh-browse/')
-            command = f'{editor} {note_dir}{hostname}'
+            notes_dir = config.get('notes_dir', '~/.ssh-browse/')
+            command = f'{editor} {notes_dir}{hostname}'
             subprocess.run(command, shell=True)
             command = 'ssh-browse'
             break
@@ -291,9 +342,24 @@ def main(stdscr):
             ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
         elif action == ord('h'):
             help_panel_visible = not help_panel_visible 
+        elif action == ord('p'):
+            preview_panel_visible = not preview_panel_visible
+            if preview_panel_visible:
+                hostname = hosts[current_option]
+                note_dir = config.get('notes_dir', '~/.ssh-browse/')
+                note_dir = os.path.expanduser(note_dir)
+                preview_content = get_preview_content(f'{note_dir}{hostname}')
         elif action == ord('q'):
             break
 
+        if current_option != last_option:
+            if preview_panel_visible:
+                hostname = hosts[current_option]
+                note_dir = config.get('notes_dir', '/home/alex/.ssh-browse/')
+                preview_content = get_preview_content(f'{note_dir}{hostname}')
+                preview_panel = None
+
+    # Cleanup    
     stdscr.keypad(0)
     curses.curs_set(1)
     curses.echo()
