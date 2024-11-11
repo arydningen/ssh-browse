@@ -269,7 +269,8 @@ def main(stdscr):
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')
-            command = f'{editor} ~/.ssh-browse/{hostname}'
+            note_dir = config.get('note_dir', '~/.ssh-browse/')
+            command = f'{editor} {note_dir}{hostname}'
             subprocess.run(command, shell=True)
             command = 'ssh-browse'
             break
