@@ -317,10 +317,11 @@ def main(stdscr):
             selected_category = categories[(category_index - 1) % len(categories)]
         elif action == ord(' '):
             hostname = hosts[current_option]
-            if hostname in marked_hosts:
-                marked_hosts.remove(hostname)
-            else:
-                marked_hosts.append(hostname)
+            if ssh_config_data[hostname].get('Reachable') != 'pinging':
+                if hostname in marked_hosts:
+                    marked_hosts.remove(hostname)
+                else:
+                    marked_hosts.append(hostname)
         elif action == ord("\n"):
             hostname = hosts[current_option]
             if ssh_config_data[hostname].get('Reachable') == 'unknown':
