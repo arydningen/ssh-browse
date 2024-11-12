@@ -317,14 +317,6 @@ def main(stdscr):
             hostname = hosts[current_option]
             command = f'ssh {hostname}'
             break
-        elif action == ord('e'):
-            hostname = hosts[current_option]
-            editor = os.environ.get('EDITOR')
-            notes_dir = config.get('notes_dir', '~/.ssh-browse/')
-            command = f'{editor} {notes_dir}{hostname}'
-            subprocess.run(command, shell=True)
-            command = 'ssh-browse'
-            break
         elif action >= ord('1') and action <= ord('9'):
             selected_category = categories[action - ord('1')]
         elif action == ord('t'):
@@ -341,7 +333,15 @@ def main(stdscr):
             hostname = hosts[current_option]
             ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
         elif action == ord('h'):
-            help_panel_visible = not help_panel_visible 
+            help_panel_visible = not help_panel_visible
+        elif action == ord('e'):
+            hostname = hosts[current_option]
+            editor = os.environ.get('EDITOR')
+            notes_dir = config.get('notes_dir', '~/.ssh-browse/')
+            command = f'{editor} {notes_dir}{hostname}'
+            subprocess.run(command, shell=True)
+            command = 'ssh-browse'
+            break
         elif action == ord('p'):
             preview_panel_visible = not preview_panel_visible
             if preview_panel_visible:
@@ -355,7 +355,8 @@ def main(stdscr):
         if current_option != last_option:
             if preview_panel_visible:
                 hostname = hosts[current_option]
-                note_dir = config.get('notes_dir', '/home/alex/.ssh-browse/')
+                note_dir = config.get('notes_dir', '~/.ssh-browse/')
+                note_dir = os.path.expanduser(note_dir)
                 preview_content = get_preview_content(f'{note_dir}{hostname}')
                 preview_panel = None
 
