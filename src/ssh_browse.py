@@ -116,9 +116,6 @@ def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
     hosts_offline = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'no'])
     hosts_unknown = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'unknown'])
     
-    #stdscr.addstr(size.lines - 2, 1, "<space> - select  | t - tmux selected   | d - demo or die", COL_FOOTER)
-    #stdscr.addstr(size.lines - 1, 1, "<enter> - connect | e - view/edit notes | q - quit", COL_FOOTER)
-     
     stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
     stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", COL_FOOTER)
 
@@ -179,7 +176,6 @@ def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONT
         win.addstr(3 + i, 2, line, COL_CONTENT)
 
     win.box()
-    
     return panel
 
 def init_colors():
@@ -305,7 +301,7 @@ def main(stdscr):
         stdscr.move(0, 0)
         stdscr.refresh()
 
-        stdscr.timeout(400)
+        stdscr.timeout(500)
         action = stdscr.getch()
 
         if action == curses.KEY_UP:
@@ -361,7 +357,6 @@ def main(stdscr):
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')
-            #notes_dir = config.get('notes_dir', '~/.ssh-browse/')
             command = f'{editor} {notes_dir}{hostname}'
             subprocess.run(command, shell=True)
             command = 'ssh-browse'
@@ -373,7 +368,6 @@ def main(stdscr):
                 preview_content = get_preview_content(f'{notes_dir}{hostname}')
         elif action == ord('q'):
             break
-
         if current_option != last_option:
             if preview_panel_visible:
                 hostname = hosts[current_option]
