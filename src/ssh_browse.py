@@ -331,7 +331,12 @@ def main(stdscr):
                 ssh_config_data[host]['Reachable'] = 'unknown'
             ssh_hosts.check_reachable_all(ssh_config_data, False)
         elif action == ord(' '):
-            ssh_config_data[hosts[current_option]]['Reachable'] = 'unknown'
+            if marked_hosts:
+                for hostname in marked_hosts:
+                    ssh_config_data[hostname]['Reachable'] = 'unknown'
+                    ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
+                else:
+                    ssh_config_data[hosts[current_option]]['Reachable'] = 'unknown'
             hostname = hosts[current_option]
             ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
         elif action == ord('h'):
