@@ -23,6 +23,8 @@
 #### v0.5.3
 **New Features:**
 - Configurable notes location. `notes_dir` can be set in `config.json`
+- Ping marked hosts.
+- Nice pinging feedback.
 
 **Bug Fixes:**
 - `BUG-001`: Crash when list of hosts is longer than screen.

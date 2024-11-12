@@ -47,15 +47,15 @@ def get_help_text():
     title = "SSH Browse Help"
     content = [
         "<enter> - Connect to the selected host",
-        "<space> - Ping the selected host",
+        "<space> - Select/Unselect a host",
         "Up/Down - Navigate through the hosts",
         "Left/Right - Change the category",
         "1-9 - Select a category by number",
         "h - Toggle help",
-        "p - Toggle preview notes",
+        "n - Toggle preview notes",
         "a - Ping all hosts",
+        "p - Ping selected hosts",
         "e - View/Edit notes for selected host",
-        "m - Mark/Unmark a host",
         "t - Open marked hosts in tmux",
         "d - Run demo or die",
         "q - Quit the application"
@@ -84,7 +84,8 @@ def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option,
 
 
         if host in selected_hosts:
-            color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
+            color = COL_SELECTION | curses.A_DIM if color == COL_INACTIVE else COL_SELECTION
+            #color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
         
         if i + top_margin < stdscr.getmaxyx()[0] - 1:
             stdscr.addstr(i + top_margin, 4, pretext + host, color)
@@ -314,7 +315,7 @@ def main(stdscr):
         elif action == curses.KEY_LEFT:
             category_index = categories.index(selected_category)
             selected_category = categories[(category_index - 1) % len(categories)]
-        elif action == ord('m'):
+        elif action == ord(' '):
             hostname = hosts[current_option]
             if hostname in marked_hosts:
                 marked_hosts.remove(hostname)
@@ -335,7 +336,7 @@ def main(stdscr):
             for hostname in ssh_config_data:
                 ssh_config_data[hostname]['Reachable'] = 'pinging'
             ssh_hosts.check_reachable_all(ssh_config_data, False)
-        elif action == ord(' '):
+        elif action == ord('p'):
             selected_host = hosts[current_option]
             if selected_host not in marked_hosts:
                 marked_hosts.append(selected_host)
@@ -355,7 +356,7 @@ def main(stdscr):
             subprocess.run(command, shell=True)
             command = 'ssh-browse'
             break
-        elif action == ord('p'):
+        elif action == ord('n'):
             preview_panel_visible = not preview_panel_visible
             if preview_panel_visible:
                 hostname = hosts[current_option]
