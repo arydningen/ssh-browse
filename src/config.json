@@ -1,5 +1,5 @@
 {
     "theme": "modern_theme",
     "ping_on_startup": "false",
-    "notes_dir": "${HOME}/.ssh-browse/"
+    "notes_dir": "~/.ssh-browse/"
 }

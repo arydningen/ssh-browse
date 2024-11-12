@@ -53,15 +53,14 @@ def get_help_text():
         "1-9 - Select a category by number",
         "h - Toggle help",
         "a - Ping all hosts",
+        "p - Preview notes for selected host",
+        "e - View/Edit notes for selected host",
         "m - Mark/Unmark a host",
         "t - Open marked hosts in tmux",
-        "e - View/Edit notes for selected host",
         "d - Run demo or die",
         "q - Quit the application"
     ]
-    choices = [" "]
-    selected_choice = 0
-    return title, content, choices, selected_choice
+    return title, content
 
 def render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER):
     stdscr.addstr(0, 4, 'Hosts', COL_HEADER)
@@ -272,7 +271,7 @@ def main(stdscr):
         render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
         
         if help_panel_visible:
-            title, content, choices, selected_choice = get_help_text()
+            title, content = get_help_text()
             help_panel = render_custom_panel(stdscr, title, content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, help_panel)
         else:
             if help_panel:
@@ -280,7 +279,7 @@ def main(stdscr):
                 help_panel = None
         
         if preview_panel_visible:
-            win_length = size.columns - col1_length
+            win_length = size.columns - col1_length - 4
             win_height = size.lines - 4
             preview_panel = render_preview_panel(stdscr, "Preview", preview_content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, col1_length, win_length, win_height, preview_panel)
         else:
@@ -346,18 +345,18 @@ def main(stdscr):
             preview_panel_visible = not preview_panel_visible
             if preview_panel_visible:
                 hostname = hosts[current_option]
-                note_dir = config.get('notes_dir', '~/.ssh-browse/')
-                note_dir = os.path.expanduser(note_dir)
-                preview_content = get_preview_content(f'{note_dir}{hostname}')
+                notes_dir = config.get('notes_dir', '~/.ssh-browse/')
+                notes_dir = os.path.expanduser(notes_dir)
+                preview_content = get_preview_content(f'{notes_dir}{hostname}')
         elif action == ord('q'):
             break
 
         if current_option != last_option:
             if preview_panel_visible:
                 hostname = hosts[current_option]
-                note_dir = config.get('notes_dir', '~/.ssh-browse/')
-                note_dir = os.path.expanduser(note_dir)
-                preview_content = get_preview_content(f'{note_dir}{hostname}')
+                notes_dir = config.get('notes_dir', '~/.ssh-browse/')
+                notes_dir = os.path.expanduser(notes_dir)
+                preview_content = get_preview_content(f'{notes_dir}{hostname}')
                 preview_panel = None
 
     # Cleanup    
