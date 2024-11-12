@@ -29,3 +29,5 @@
 **Bug Fixes:**
 - `BUG-001`: Crash when list of hosts is longer than screen.
 
+**Notes**
+- Modified keybindings.

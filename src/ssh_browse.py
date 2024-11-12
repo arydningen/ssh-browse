@@ -290,7 +290,7 @@ def main(stdscr):
         if preview_panel_visible:
             win_length = size.columns - col1_length - 4
             win_height = size.lines - 4
-            preview_panel = render_preview_panel(stdscr, "Preview", preview_content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, col1_length, win_length, win_height, preview_panel)
+            preview_panel = render_preview_panel(stdscr, "Notes preview", preview_content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, col1_length, win_length, win_height, preview_panel)
         else:
             if preview_panel:
                 preview_panel.hide()
@@ -323,8 +323,14 @@ def main(stdscr):
                 marked_hosts.append(hostname)
         elif action == ord("\n"):
             hostname = hosts[current_option]
-            command = f'ssh {hostname}'
-            break
+            if ssh_config_data[hostname].get('Reachable') == 'unknown':
+                ssh_config_data[hostname]['Reachable'] = 'pinging'
+                ssh_hosts.check_reachable(ssh_config_data[hostname])
+            if ssh_config_data[hostname].get('Reachable') == 'yes':
+                command = f'ssh {hostname}'
+                break
+            else:
+                stdscr.addstr(size.lines - 1, 1, f"Host {hostname} is not reachable", COL_FOOTER)
         elif action >= ord('1') and action <= ord('9'):
             selected_category = categories[action - ord('1')]
         elif action == ord('t'):
