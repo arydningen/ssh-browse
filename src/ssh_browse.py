@@ -67,7 +67,7 @@ def render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER):
     stdscr.addstr(0, col1_length, 'Properties', COL_HEADER)
     stdscr.addstr(0, col1_length + col2_length + spacer, 'Categories', COL_HEADER)
 
-def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW):
+def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, scroll_pos, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW):
     for i, host in enumerate(hosts):
         if ssh_config_data[host].get('Reachable') == 'yes':
             pretext = 'o '
@@ -80,9 +80,12 @@ def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option,
             color = COL_UNKNOWN
         if host in selected_hosts:
             color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
-        stdscr.addstr(i + top_margin, 4, pretext + host, color)
-        if current_option == i:
-            stdscr.addstr(i + top_margin, 1, '->', COL_ARROW)
+        
+        if i + top_margin < stdscr.getmaxyx()[0] - 1:
+            stdscr.addstr(i + top_margin, 4, pretext + host, color)
+            if current_option == i + scroll_pos:
+                stdscr.addstr(i + top_margin, 1, '->', COL_ARROW)
+
 
 def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES,COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE):
     hostname = hosts[current_option]
@@ -265,7 +268,7 @@ def main(stdscr):
         current_option = min(current_option, len(hosts) - 1)
         scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
 
-        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
+        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, scroll_pos, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
         render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
         render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
         render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
