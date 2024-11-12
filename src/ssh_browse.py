@@ -199,14 +199,14 @@ def init_colors():
     return fgcols
 
 class Theme:
-    def __init__(self, theme_name='original_theme'):
+    def __init__(self, theme_name='modern_theme'):
         self.theme_name = theme_name
         self.colors = self.load_theme(theme_name)
 
     def load_theme(self, theme_name):
         with open(get_themes_location(), 'r') as file:
             themes = json.load(file)
-        return themes.get(theme_name, themes['original_theme'])
+        return themes.get(theme_name, themes['modern_theme'])
 
     def init_colors(self):
         fgcols = {}

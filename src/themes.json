@@ -1,5 +1,5 @@
 {
-    "original_theme": {
+    "original_gangster": {
         "COL_ACTIVE": [2, -1],
         "COL_INACTIVE": [1, -1],
         "COL_UNKNOWN": [3, -1],
@@ -11,7 +11,7 @@
         "COL_FOOTER": [7, -1],
         "COL_SELECTION": [93, -1]
     },
-    "green_theme": {
+    "neo_green": {
         "COL_ACTIVE": [2, -1],
         "COL_INACTIVE": [1, -1],
         "COL_UNKNOWN": [3, -1],
@@ -21,7 +21,7 @@
         "COL_SELECTED_CATEGORY": [2, -1],
         "COL_CATOGORY": [2, -1],
         "COL_FOOTER": [2, -1],
-        "COL_SELECTION": [2, -1]
+        "COL_SELECTION": [47, -1]
     },
     "modern_theme": {
         "COL_ACTIVE": [10, -1],
@@ -35,7 +35,7 @@
         "COL_FOOTER": [7, -1],
         "COL_SELECTION": [93, -1]
     },
-    "plain_theme": {
+    "plain_by_night": {
         "COL_ACTIVE": [7, -1],
         "COL_INACTIVE": [8, -1],
         "COL_UNKNOWN": [7, -1],
@@ -47,7 +47,7 @@
         "COL_FOOTER": [7, -1],
         "COL_SELECTION": [7, -1]
     },
-    "dark_theme": {
+    "dark_dimensions": {
         "COL_ACTIVE": [130, -1],
         "COL_INACTIVE": [1, -1],
         "COL_UNKNOWN": [130, -1],
@@ -59,9 +59,9 @@
         "COL_FOOTER": [8, -1],
         "COL_SELECTION": [9, -1]
     },
-    "fun_theme": {
+    "fun_surfer": {
         "COL_ACTIVE": [5, -1],
-        "COL_INACTIVE": [6, -1],
+        "COL_INACTIVE": [138 , -1],
         "COL_UNKNOWN": [7, -1],
         "COL_HEADER": [8, -1],
         "COL_ARROW": [9, -1],
