@@ -244,7 +244,10 @@ def main(stdscr):
     preview_panel = None
     preview_panel_visible = False
     preview_content = []
-    
+
+    notes_dir = config.get('notes_dir', '~/.ssh-browse/')
+    notes_dir = os.path.expanduser(notes_dir)
+
     # Uses wsl2 compatible path as default
     ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
     ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
@@ -358,7 +361,7 @@ def main(stdscr):
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')
-            notes_dir = config.get('notes_dir', '~/.ssh-browse/')
+            #notes_dir = config.get('notes_dir', '~/.ssh-browse/')
             command = f'{editor} {notes_dir}{hostname}'
             subprocess.run(command, shell=True)
             command = 'ssh-browse'
@@ -367,8 +370,6 @@ def main(stdscr):
             preview_panel_visible = not preview_panel_visible
             if preview_panel_visible:
                 hostname = hosts[current_option]
-                notes_dir = config.get('notes_dir', '~/.ssh-browse/')
-                notes_dir = os.path.expanduser(notes_dir)
                 preview_content = get_preview_content(f'{notes_dir}{hostname}')
         elif action == ord('q'):
             break
@@ -376,8 +377,6 @@ def main(stdscr):
         if current_option != last_option:
             if preview_panel_visible:
                 hostname = hosts[current_option]
-                notes_dir = config.get('notes_dir', '~/.ssh-browse/')
-                notes_dir = os.path.expanduser(notes_dir)
                 preview_content = get_preview_content(f'{notes_dir}{hostname}')
                 preview_panel = None
 
