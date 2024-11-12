@@ -75,9 +75,14 @@ def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option,
         elif ssh_config_data[host].get('Reachable') == 'no':
             pretext = 'x '
             color = COL_INACTIVE
-        else:
+        elif ssh_config_data[host].get('Reachable') == 'pinging':
             pretext = '? '
             color = COL_UNKNOWN
+        else:
+            pretext = '> '
+            color = COL_UNKNOWN
+
+
         if host in selected_hosts:
             color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
         
@@ -327,18 +332,19 @@ def main(stdscr):
         elif action == ord('d'):
             tmux_split.demo()
         elif action == ord('a'):
-            for host in ssh_config_data:
-                ssh_config_data[host]['Reachable'] = 'unknown'
+            for hostname in ssh_config_data:
+                ssh_config_data[hostname]['Reachable'] = 'pinging'
             ssh_hosts.check_reachable_all(ssh_config_data, False)
         elif action == ord(' '):
-            if marked_hosts:
-                for hostname in marked_hosts:
-                    ssh_config_data[hostname]['Reachable'] = 'unknown'
-                    ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
-                else:
-                    ssh_config_data[hosts[current_option]]['Reachable'] = 'unknown'
-            hostname = hosts[current_option]
-            ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname]}, False)
+            selected_host = hosts[current_option]
+            if selected_host not in marked_hosts:
+                marked_hosts.append(selected_host)
+            filtered_hosts = {hostname: ssh_config_data[hostname] for hostname in marked_hosts}
+            for hostname in filtered_hosts:
+                ssh_config_data[hostname]['Reachable'] = 'pinging'
+            ssh_hosts.check_reachable_all(filtered_hosts, False)
+            marked_hosts.clear()
+
         elif action == ord('h'):
             help_panel_visible = not help_panel_visible
         elif action == ord('e'):
