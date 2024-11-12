@@ -100,6 +100,17 @@ def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin
     valuelist = list(selected_host_config.values())
     hostcolor = COL_ACTIVE if selected_host_config.get('Reachable') == 'yes' else COL_INACTIVE if selected_host_config.get('Reachable') == 'no' else COL_UNKNOWN
     stdscr.addstr(0 + top_margin, col1_length, hostname, hostcolor)
+
+    # Remove 'Category' and 'Reachable' from propertylist and valuelist
+    if 'Category' in propertylist:
+        index = propertylist.index('Category')
+        propertylist.pop(index)
+        valuelist.pop(index)
+    if 'Reachable' in propertylist:
+        index = propertylist.index('Reachable')
+        propertylist.pop(index)
+        valuelist.pop(index)
+        
     for i, (prop, val) in enumerate(zip(propertylist, valuelist)):
         stdscr.addstr(i + 1 + top_margin, col1_length, f'{prop}: {val}', COL_PROPERTIES)
 
