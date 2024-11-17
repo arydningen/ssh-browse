@@ -25,13 +25,12 @@ def get_themes_location():
     user = pwd.getpwuid(id).pw_name
     return f'/home/{user}/.ssh-browse/themes.json'
 
-def get_hosts_to_display(ssh_config_data, selected_category):
+def get_hosts_to_display(ssh_config_data, selected_category, search_filter):
     hosts = []
-    for k in ssh_config_data.keys():
-        if selected_category != 'All':
-            if ssh_config_data[k]['Category'] == selected_category:
-                hosts.append(k)
-        else:
+    for k, v in ssh_config_data.items():
+        if selected_category != 'All' and v['Category'] != selected_category:
+            continue
+        if search_filter.lower() in k.lower():
             hosts.append(k)
     return hosts
 
@@ -130,7 +129,7 @@ def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
     stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
     stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", COL_FOOTER)
 
-def render_custom_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT, panel=None):
+def render_help_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT, panel=None):
     size = stdscr.getmaxyx()
     win_height = len(content) + 4
     win_width = max(len(title), max(len(line) for line in content)) + 4
@@ -189,6 +188,27 @@ def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONT
     win.box()
     return panel
 
+def render_search_panel(stdscr, title, COL_WINDOW, COL_TITLE, COL_CONTENT, panel=None):
+    size = stdscr.getmaxyx()
+    win_height = 3
+    win_width = size[1] - 4
+    win_y = size[0] - win_height - 1
+    win_x = 2
+
+    if panel is None:
+        win = curses.newwin(win_height, win_width, win_y, win_x)
+        win.bkgd(' ', COL_WINDOW)
+        win.box()
+        panel = curses.panel.new_panel(win)
+    else:
+        win = panel.window()
+        win.erase()
+        win.box()
+
+    win.addstr(1, 2, title, COL_TITLE)
+
+    return panel
+
 def init_colors():
     fgcols = []
     curses.start_color()
@@ -226,7 +246,6 @@ def main(stdscr):
     # Extract settings from the configuration
     ping_on_startup = config.get('ping_on_startup', 'default_value')
     theme = Theme(config.get('theme', 'plain_theme'))
-
     fgcols = theme.init_colors()
     COL_ACTIVE = fgcols['COL_ACTIVE']
     COL_INACTIVE = fgcols['COL_INACTIVE'] # | curses.A_DIM
@@ -238,12 +257,12 @@ def main(stdscr):
     COL_CATOGORY = fgcols['COL_CATOGORY']
     COL_FOOTER = fgcols['COL_FOOTER']
     COL_SELECTION = fgcols['COL_SELECTION']
+
     curses.curs_set(0)
     curses.noecho()
     curses.cbreak()
-
     stdscr.clear()
-    command = ''
+    exit_command = ''
 
     help_panel = None
     help_panel_visible = False
@@ -251,6 +270,10 @@ def main(stdscr):
     preview_panel = None
     preview_panel_visible = False
     preview_content = []
+
+    search_panel = None
+    search_panel_visible = False
+    search_filter = ''
 
     notes_dir = config.get('notes_dir', '~/.ssh-browse/')
     notes_dir = os.path.expanduser(notes_dir)
@@ -274,7 +297,7 @@ def main(stdscr):
     marked_hosts = []
 
     while True:
-        hosts = get_hosts_to_display(ssh_config_data, selected_category)
+        hosts = get_hosts_to_display(ssh_config_data, selected_category, search_filter)
         stdscr.erase()
         size = os.get_terminal_size()
         last_option = current_option
@@ -284,14 +307,16 @@ def main(stdscr):
         current_option = min(current_option, len(hosts) - 1)
         scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
 
-        render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, scroll_pos, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
-        render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
-        render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
+        if len(hosts) > 0:
+            render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, scroll_pos, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
+            render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
+        
+            render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
         render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
         
         if help_panel_visible:
             title, content = get_help_text()
-            help_panel = render_custom_panel(stdscr, title, content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, help_panel)
+            help_panel = render_help_panel(stdscr, title, content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, help_panel)
         else:
             if help_panel:
                 help_panel.hide()
@@ -306,6 +331,13 @@ def main(stdscr):
                 preview_panel.hide()
                 preview_panel = None
 
+        if search_panel_visible:
+            search_panel = render_search_panel(stdscr, f"Search: {search_filter}", COL_ACTIVE, COL_HEADER, COL_ACTIVE, search_panel)
+        else:
+            if search_panel:
+                search_panel.hide()
+                search_panel = None
+                
         curses.panel.update_panels()
 
         # Refresh the screen
@@ -338,7 +370,7 @@ def main(stdscr):
                 ssh_config_data[hostname]['Reachable'] = 'pinging'
                 ssh_hosts.check_reachable(ssh_config_data[hostname])
             if ssh_config_data[hostname].get('Reachable') == 'yes':
-                command = f'ssh {hostname}'
+                exit_command = f'ssh {hostname}'
                 break
             else:
                 stdscr.addstr(size.lines - 1, 1, f"Host {hostname} is not reachable", COL_FOOTER)
@@ -365,12 +397,14 @@ def main(stdscr):
 
         elif action == ord('h'):
             help_panel_visible = not help_panel_visible
+        elif action == ord('s'):
+            seach_panel_visible = not search_panel_visible            
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')
-            command = f'{editor} {notes_dir}{hostname}'
-            subprocess.run(command, shell=True)
-            command = 'ssh-browse'
+            exit_command = f'{editor} {notes_dir}{hostname}'
+            subprocess.run(exit_command, shell=True)
+            exit_command = 'ssh-browse'
             break
         elif action == ord('n'):
             preview_panel_visible = not preview_panel_visible
@@ -391,8 +425,8 @@ def main(stdscr):
     curses.echo()
     curses.nocbreak()
 
-    if command:
-        atexit.register(os.system, command)
+    if exit_command:
+        atexit.register(os.system, exit_command)
 
 if __name__ == "__main__":
     curses.wrapper(main)

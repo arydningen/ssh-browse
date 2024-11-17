@@ -1,4 +1,4 @@
-### Version Log
+### Changelog
 
 #### v0.0.1 - v0.5.0
 **New Features:**
