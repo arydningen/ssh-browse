@@ -1,7 +1,7 @@
 ## SSH Browse v0.5.6
 Utility for browsing ssh hosts in the terminal.
 
-It is currently only been tested on Ubuntu 18.04 and up.
+It has currently only been tested on Ubuntu 18.04 and up.
 Support for Windows and other distros may vary.
 
 ## Requirements

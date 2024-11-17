@@ -362,6 +362,8 @@ def main(stdscr):
         # Handle search input if search panel is visible
         if search_panel_visible:
             if action == curses.KEY_BACKSPACE:
+                if len(search_filter) == 0:
+                    search_panel_visible = False
                 search_filter = search_filter[:-1]
             elif action == curses.KEY_ENTER or action == ord('\n'):
                 search_panel_visible = False
