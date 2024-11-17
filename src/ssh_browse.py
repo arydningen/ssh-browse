@@ -45,19 +45,20 @@ def get_preview_content(filename):
 def get_help_text():
     title = "SSH Browse Help"
     content = [
-        "<enter> - Connect to the selected host",
-        "<space> - Select/Unselect a host",
-        "Up/Down - Navigate through the hosts",
-        "Left/Right - Change the category",
-        "1-9 - Select a category by number",
-        "h - Toggle help",
-        "n - Toggle preview notes",
+        "<enter> - Connect host",
+        "<space> - Select host",
+        "Up/Down - Navigate hosts",
+        "Left/Right - Change category",
+        "1-9 - Select category",
         "a - Ping all hosts",
         "p - Ping selected hosts",
-        "e - View/Edit notes for selected host",
-        "t - Open marked hosts in tmux",
+        "h - Toggle help",
+        "n - Toggle notes",
+        "s - Search panel",
+        "e - Edit notes",
+        "t - Tmux hosts",
         "d - Run demo or die",
-        "q - Quit the application"
+        "q - Quit"
     ]
     return title, content
 
@@ -192,7 +193,7 @@ def render_search_panel(stdscr, title, COL_WINDOW, COL_TITLE, COL_CONTENT, panel
     size = stdscr.getmaxyx()
     win_height = 3
     win_width = size[1] - 4
-    win_y = size[0] - win_height - 1
+    win_y = size[0] - win_height - 2
     win_x = 2
 
     if panel is None:
@@ -337,7 +338,7 @@ def main(stdscr):
             if search_panel:
                 search_panel.hide()
                 search_panel = None
-                
+
         curses.panel.update_panels()
 
         # Refresh the screen
@@ -357,7 +358,19 @@ def main(stdscr):
         elif action == curses.KEY_LEFT:
             category_index = categories.index(selected_category)
             selected_category = categories[(category_index - 1) % len(categories)]
-        elif action == ord(' '):
+
+        # Handle search input if search panel is visible
+        if search_panel_visible:
+            if action == curses.KEY_BACKSPACE:
+                search_filter = search_filter[:-1]
+            elif action == curses.KEY_ENTER or action == ord('\n'):
+                search_panel_visible = False
+            elif action >= 32 and action <= 126:
+                search_filter += chr(action)
+            hosts = get_hosts_to_display(ssh_config_data, selected_category, search_filter)
+            continue
+
+        if action == ord(' '):
             hostname = hosts[current_option]
             if ssh_config_data[hostname].get('Reachable') != 'pinging':
                 if hostname in marked_hosts:
@@ -398,7 +411,7 @@ def main(stdscr):
         elif action == ord('h'):
             help_panel_visible = not help_panel_visible
         elif action == ord('s'):
-            seach_panel_visible = not search_panel_visible            
+            search_panel_visible = not search_panel_visible            
         elif action == ord('e'):
             hostname = hosts[current_option]
             editor = os.environ.get('EDITOR')

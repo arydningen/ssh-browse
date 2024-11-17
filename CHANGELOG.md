@@ -35,5 +35,11 @@
 **Bug Fixes:**
 - `BUG-001`: Crash when list of hosts is longer than screen.
 
+#### v0.5.4
+
 **Notes**
 - Modified keybindings.
+
+#### v0.5.5
+**New Features:**
+- Search function
