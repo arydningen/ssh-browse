@@ -395,9 +395,10 @@ def main(stdscr):
         elif action == ord('d'):
             tmux_split.demo()
         elif action == ord('a'):
-            for hostname in ssh_config_data:
+            visible_hosts = get_hosts_to_display(ssh_config_data, selected_category, search_filter)
+            for hostname in visible_hosts:
                 ssh_config_data[hostname]['Reachable'] = 'pinging'
-            ssh_hosts.check_reachable_all(ssh_config_data, False)
+            ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname] for hostname in visible_hosts}, False)
         elif action == ord('p'):
             selected_host = hosts[current_option]
             if selected_host not in marked_hosts:

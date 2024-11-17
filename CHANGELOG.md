@@ -37,9 +37,13 @@
 
 #### v0.5.4
 
-**Notes**
+**Changes:**
 - Modified keybindings.
 
 #### v0.5.5
 **New Features:**
 - Search function
+
+#### v0.5.6
+**Changes:**
+- Ping all now just pings visible hosts.
