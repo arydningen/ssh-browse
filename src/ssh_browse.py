@@ -117,10 +117,13 @@ def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin
 
 def render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY):
     selected_host_category = ssh_config_data[hosts[current_option]]['Category']
-    for i, category in enumerate(categories):
+    max_lines = stdscr.getmaxyx()[0] - top_margin - 2
+    category_scroll_pos = (categories.index(selected_category) % max_lines) + 1 if categories.index(selected_category) >= max_lines else 0
+
+    for i, category in enumerate(categories[category_scroll_pos:]):
         color = COL_SELECTED_CATEGORY if category == selected_host_category or category == selected_category else COL_CATOGORY
         if i + top_margin < stdscr.getmaxyx()[0] - 1:
-            stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{i + 1}. {category}', color)
+            stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{category_scroll_pos + i + 1}. {category}', color)
 
 def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
     number_of_hosts = len(ssh_config_data)
