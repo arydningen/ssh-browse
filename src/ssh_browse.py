@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import curses.ascii
 import os
 import subprocess
 import atexit
@@ -83,7 +84,6 @@ def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option,
             pretext = '> '
             color = COL_UNKNOWN
 
-
         if host in selected_hosts:
             color = COL_SELECTION | curses.A_DIM if color == COL_INACTIVE else COL_SELECTION
             #color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
@@ -92,7 +92,6 @@ def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option,
             stdscr.addstr(i + top_margin, 4, pretext + host, color)
             if current_option == i + scroll_pos:
                 stdscr.addstr(i + top_margin, 1, '->', COL_ARROW)
-
 
 def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES,COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE):
     hostname = hosts[current_option]
@@ -267,6 +266,8 @@ def main(stdscr, args):
     curses.curs_set(0)
     curses.noecho()
     curses.cbreak()
+    curses.set_escdelay(10)
+
     stdscr.clear()
     exit_command = ''
 
@@ -389,6 +390,9 @@ def main(stdscr, args):
                     search_panel_visible = False
                 search_filter = search_filter[:-1]
             elif action == curses.KEY_ENTER or action == ord('\n'):
+                search_panel_visible = False
+            elif action == curses.ascii.ESC:
+                search_filter = ''
                 search_panel_visible = False
             elif action >= 32 and action <= 126:
                 search_filter += chr(action)
