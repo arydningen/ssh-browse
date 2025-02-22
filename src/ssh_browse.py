@@ -294,13 +294,28 @@ def main(stdscr, args):
     if ping_on_startup == 'true':
         ssh_hosts.check_reachable_all(ssh_config_data, False)
 
+    # Calculate the preferred column 1 length and set default column lengths
     top_margin, col1_length, col2_length, spacer = 2, 10, 20, 10
     for k in ssh_config_data.keys():
         if len(k) + spacer > col1_length:
             col1_length = len(k) + spacer
 
-    current_option = 0
+    # Calculate the preferred column 2 length
+    preferrable_col2_length = 20
+    for k, v in ssh_config_data.items():
+        for prop, val in v.items():
+            if len(prop) > preferrable_col2_length:
+                preferrable_col2_length = len(prop)
+            if len(str(val)) > preferrable_col2_length:
+                preferrable_col2_length = len(str(val))
+
+    # Some wild calculations to make the columns fit the screen
     categories = ssh_hosts.get_categories(ssh_config_data)
+    longest_category = max(len(category) for category in categories)
+    max_length = stdscr.getmaxyx()[1]
+    col2_length = min(preferrable_col2_length, max_length - longest_category - col1_length - spacer - 5)
+
+    current_option = 0
     categories.insert(0, 'All')
     selected_category = 'All'
     marked_hosts = []
