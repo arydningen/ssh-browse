@@ -4,12 +4,18 @@ import subprocess
 import threading
 import argparse
 import pwd
+import json
 
 # Used to remove dupes while keeping order
 def uniqify(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
+
+def import_json_config(filename):
+    with open(filename, 'r') as file:
+        ssh_config = json.load(file)
+    return ssh_config
 
 def read_ssh_config(filename):
     ssh_config = {}
@@ -132,7 +138,7 @@ def test2(args):
     if (args.ssh_ping):
         check_reachable_all(ssh_config_data, True)
     
-    hostnames = get_values('HostName', ssh_config_data)
+    #hostnames = get_values('HostName', ssh_config_data)
     #print(hostnames)
     
     for k in ssh_config_data.keys():
@@ -147,7 +153,7 @@ def test2(args):
                 s = 'x ' + s
 
         print(s)
-        print(ssh_config_data)
+        # print(ssh_config_data)
 
 if __name__ == '__main__':
     msg = "ssh-hosts usage"

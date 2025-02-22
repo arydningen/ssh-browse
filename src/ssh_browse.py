@@ -8,6 +8,7 @@ import ssh_hosts
 import tmux_split
 import pwd
 import json
+import argparse
 
 # Wsl2 compatibility
 def get_ssh_config_location():
@@ -240,7 +241,7 @@ class Theme:
         return fgcols
 
 # MARK: main
-def main(stdscr):
+def main(stdscr, args):
     # Load configuration from .ssh-browse file
     with open(get_config_location(), 'r') as config_file:
         config = json.load(config_file)
@@ -280,9 +281,12 @@ def main(stdscr):
     notes_dir = config.get('notes_dir', '~/.ssh-browse/')
     notes_dir = os.path.expanduser(notes_dir)
 
-    # Uses wsl2 compatible path as default
-    ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
-    ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
+    if args.importJSON:
+        ssh_config_data = ssh_hosts.import_json_config(args.importJSON) 
+    else:
+        # Uses wsl2 compatible path as default
+        ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
+        ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
 
     if ping_on_startup == 'true':
         ssh_hosts.check_reachable_all(ssh_config_data, False)
@@ -446,4 +450,8 @@ def main(stdscr):
         atexit.register(os.system, exit_command)
 
 if __name__ == "__main__":
-    curses.wrapper(main)
+    msg = 'SSH Browse'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--importJSON', help='Import hosts from JSON file')
+    args = parser.parse_args()
+    curses.wrapper(main, args)
