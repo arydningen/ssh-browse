@@ -147,6 +147,7 @@ def test2(args):
                 s = 'x ' + s
 
         print(s)
+        print(ssh_config_data)
 
 if __name__ == '__main__':
     msg = "ssh-hosts usage"

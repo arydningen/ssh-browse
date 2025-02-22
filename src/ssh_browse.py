@@ -118,7 +118,8 @@ def render_categories(stdscr, ssh_config_data, hosts, current_option, categories
     selected_host_category = ssh_config_data[hosts[current_option]]['Category']
     for i, category in enumerate(categories):
         color = COL_SELECTED_CATEGORY if category == selected_host_category or category == selected_category else COL_CATOGORY
-        stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{i + 1}. {category}', color)
+        if i + top_margin < stdscr.getmaxyx()[0] - 1:
+            stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{i + 1}. {category}', color)
 
 def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
     number_of_hosts = len(ssh_config_data)
