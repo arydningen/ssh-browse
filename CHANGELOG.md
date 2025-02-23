@@ -47,3 +47,16 @@
 #### v0.5.6
 **Changes:**
 - Ping all now just pings visible hosts.
+
+#### v0.5.7
+**Bug Fixes:**
+- Fixed bug! Program crashed if category list exceeded bounds.
+
+**Changes:**
+- Impoved column size calculations.
+- Pressing ESC while searchpanel is visible closes it and clears the searchfilter.
+- Searchfilter now also applies to hostname value.
+
+**New Features:**
+- Can import hosts from JSON file.
+- Scrolling categories.
