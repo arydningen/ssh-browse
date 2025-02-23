@@ -12,12 +12,13 @@ import json
 import argparse
 
 class RenderConfig:
-    def __init__(self, col1_length, col2_length, spacer, top_margin, colors):
+    def __init__(self, col1_length, col2_length, spacer, top_margin, selected_host, colors):
         self.col1_length = col1_length
         self.col2_length = col2_length
         self.spacer = spacer
         self.top_margin = top_margin
         self.colors = colors
+        self.selected_host = selected_host
 
 # Wsl2 compatibility
 def get_ssh_config_location():
@@ -79,7 +80,7 @@ def render_header(stdscr, config):
     stdscr.addstr(0, config.col1_length, 'Properties', config.colors['COL_HEADER'])
     stdscr.addstr(0, config.col1_length + config.col2_length + config.spacer, 'Categories', config.colors['COL_HEADER'])
 
-def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, scroll_pos, config):
+def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, scroll_pos, config):
     for i, host in enumerate(hosts):
         if ssh_config_data[host].get('Reachable') == 'yes':
             pretext = 'o '
@@ -99,11 +100,11 @@ def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option,
         
         if i + config.top_margin < stdscr.getmaxyx()[0] - 1:
             stdscr.addstr(i + config.top_margin, 4, pretext + host, color)
-            if current_option == i + scroll_pos:
+            if config.selected_host == i + scroll_pos:
                 stdscr.addstr(i + config.top_margin, 1, '->', config.colors['COL_ARROW'])
 
-def render_properties(stdscr, ssh_config_data, hosts, current_option, config):
-    hostname = hosts[current_option]
+def render_properties(stdscr, ssh_config_data, hosts, config):
+    hostname = hosts[config.selected_host]
     selected_host_config = ssh_config_data[hostname]
     propertylist = list(selected_host_config.keys())
     valuelist = list(selected_host_config.values())
@@ -123,8 +124,8 @@ def render_properties(stdscr, ssh_config_data, hosts, current_option, config):
     for i, (prop, val) in enumerate(zip(propertylist, valuelist)):
         stdscr.addstr(i + 1 + config.top_margin, config.col1_length, f'{prop}: {val}', config.colors['COL_PROPERTIES'])
 
-def render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, config):
-    selected_host_category = ssh_config_data[hosts[current_option]]['Category']
+def render_categories(stdscr, ssh_config_data, hosts, categories, selected_category, config):
+    selected_host_category = ssh_config_data[hosts[config.selected_host]]['Category']
     max_lines = stdscr.getmaxyx()[0] - config.top_margin - 2
     category_scroll_pos = (categories.index(selected_category) % max_lines) + 1 if categories.index(selected_category) >= max_lines else 0
 
@@ -312,8 +313,9 @@ def main(stdscr, args):
     max_length = stdscr.getmaxyx()[1]
     col2_length = min(preferrable_col2_length, max_length - longest_category - col1_length - spacer - 5)
 
+    selected_host = 0
     # Setup the rendering configuration
-    render_config = RenderConfig(col1_length, col2_length, spacer, top_margin, {
+    render_config = RenderConfig(col1_length, col2_length, spacer, top_margin, selected_host, {
         'COL_ACTIVE': fgcols['COL_ACTIVE'],
         'COL_INACTIVE': fgcols['COL_INACTIVE'],
         'COL_UNKNOWN': fgcols['COL_UNKNOWN'],
@@ -326,7 +328,6 @@ def main(stdscr, args):
         'COL_SELECTION': fgcols['COL_SELECTION']
     })
 
-    current_option = 0
     categories.insert(0, 'All')
     selected_category = 'All'
     marked_hosts = []
@@ -338,19 +339,18 @@ def main(stdscr, args):
         hosts = get_hosts_to_display(ssh_config_data, selected_category, search_filter)
         stdscr.erase()
         size = os.get_terminal_size()
-        last_option = current_option
+        last_option = render_config.selected_host
 
         #render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER)
         render_header(stdscr, render_config)
         max_lines = size.lines - top_margin - 2
-        current_option = min(current_option, len(hosts) - 1)
-        scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
+        render_config.selected_host = min(render_config.selected_host, len(hosts) - 1)
+        scroll_pos = (render_config.selected_host % max_lines) + 1 if render_config.selected_host >= max_lines else 0
 
         if len(hosts) > 0:
-            render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, scroll_pos, render_config)
-            render_properties(stdscr, ssh_config_data, hosts, current_option, render_config)
-        
-            render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, render_config)
+            render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, scroll_pos, render_config)
+            render_properties(stdscr, ssh_config_data, hosts, render_config)
+            render_categories(stdscr, ssh_config_data, hosts, categories, selected_category, render_config)
         render_footer(stdscr, ssh_config_data, size, render_config)
         
         if help_panel_visible:
@@ -387,9 +387,9 @@ def main(stdscr, args):
         action = stdscr.getch()
 
         if action == curses.KEY_UP:
-            current_option = max(current_option - 1, 0)
+            render_config.selected_host = max(render_config.selected_host - 1, 0)
         elif action == curses.KEY_DOWN:
-            current_option = min(current_option + 1, len(hosts) - 1)
+            render_config.selected_host = min(render_config.selected_host + 1, len(hosts) - 1)
         elif action == curses.KEY_RIGHT:
             category_index = categories.index(selected_category)
             selected_category = categories[(category_index + 1) % len(categories)]
@@ -414,14 +414,14 @@ def main(stdscr, args):
             continue
 
         if action == ord(' '):
-            hostname = hosts[current_option]
+            hostname = hosts[render_config.selected_host]
             if ssh_config_data[hostname].get('Reachable') != 'pinging':
                 if hostname in marked_hosts:
                     marked_hosts.remove(hostname)
                 else:
                     marked_hosts.append(hostname)
         elif action == ord("\n"):
-            hostname = hosts[current_option]
+            hostname = hosts[render_config.selected_host]
             if ssh_config_data[hostname].get('Reachable') == 'unknown':
                 ssh_config_data[hostname]['Reachable'] = 'pinging'
                 ssh_hosts.check_reachable(ssh_config_data[hostname])
@@ -443,7 +443,7 @@ def main(stdscr, args):
                 ssh_config_data[hostname]['Reachable'] = 'pinging'
             ssh_hosts.check_reachable_all({hostname: ssh_config_data[hostname] for hostname in visible_hosts}, False)
         elif action == ord('p'):
-            selected_host = hosts[current_option]
+            selected_host = hosts[render_config.selected_host]
             if selected_host not in marked_hosts:
                 marked_hosts.append(selected_host)
             filtered_hosts = {hostname: ssh_config_data[hostname] for hostname in marked_hosts}
@@ -457,7 +457,7 @@ def main(stdscr, args):
         elif action == ord('s'):
             search_panel_visible = not search_panel_visible            
         elif action == ord('e'):
-            hostname = hosts[current_option]
+            hostname = hosts[render_config.selected_host]
             editor = os.environ.get('EDITOR')
             exit_command = f'{editor} {notes_dir}{hostname}'
             subprocess.run(exit_command, shell=True)
@@ -466,13 +466,13 @@ def main(stdscr, args):
         elif action == ord('n'):
             preview_panel_visible = not preview_panel_visible
             if preview_panel_visible:
-                hostname = hosts[current_option]
+                hostname = hosts[render_config.selected_host]
                 preview_content = get_preview_content(f'{notes_dir}{hostname}')
         elif action == ord('q'):
             break
-        if current_option != last_option:
+        if render_config.selected_host != last_option:
             if preview_panel_visible:
-                hostname = hosts[current_option]
+                hostname = hosts[render_config.selected_host]
                 preview_content = get_preview_content(f'{notes_dir}{hostname}')
                 preview_panel = None
 
