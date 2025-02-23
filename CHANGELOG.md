@@ -51,6 +51,7 @@
 #### v0.5.7
 **Bug Fixes:**
 - Fixed bug! Program crashed if category list exceeded bounds.
+- Fixed bug! Scrolling more than max_lines caused a problem
 
 **Changes:**
 - Impoved column size calculations.

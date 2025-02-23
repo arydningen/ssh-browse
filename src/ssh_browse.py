@@ -127,7 +127,8 @@ def render_properties(stdscr, ssh_config_data, hosts, config):
 def render_categories(stdscr, ssh_config_data, hosts, categories, selected_category, config):
     selected_host_category = ssh_config_data[hosts[config.selected_host]]['Category']
     max_lines = stdscr.getmaxyx()[0] - config.top_margin - 2
-    category_scroll_pos = (categories.index(selected_category) % max_lines) + 1 if categories.index(selected_category) >= max_lines else 0
+    selected_host_category_index = categories.index(selected_host_category)
+    category_scroll_pos = max(0, selected_host_category_index - max_lines + 1) if selected_host_category_index >= max_lines else 0
 
     for i, category in enumerate(categories[category_scroll_pos:]):
         color = config.colors['COL_SELECTED_CATEGORY'] if category == selected_host_category or category == selected_category else config.colors['COL_CATOGORY']
@@ -135,7 +136,6 @@ def render_categories(stdscr, ssh_config_data, hosts, categories, selected_categ
             stdscr.addstr(i + config.top_margin, config.col1_length + config.col2_length + config.spacer, f'{category_scroll_pos + i + 1}. {category}', color)
 
 def render_footer(stdscr, ssh_config_data, size, config):
-    number_of_hosts = len(ssh_config_data)
     ssh_agent_running = 'yes' if os.environ.get('SSH_AUTH_SOCK') else 'no'
     hosts_online = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'yes'])
     hosts_offline = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'no'])
@@ -341,12 +341,11 @@ def main(stdscr, args):
         size = os.get_terminal_size()
         last_option = render_config.selected_host
 
-        #render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER)
         render_header(stdscr, render_config)
-        max_lines = size.lines - top_margin - 2
-        render_config.selected_host = min(render_config.selected_host, len(hosts) - 1)
-        scroll_pos = (render_config.selected_host % max_lines) + 1 if render_config.selected_host >= max_lines else 0
 
+        max_lines = size.lines - top_margin - 2
+        scroll_pos = max(0, render_config.selected_host - max_lines + 1) if render_config.selected_host >= max_lines else 0
+        render_config.selected_host = min(render_config.selected_host, len(hosts) - 1)
         if len(hosts) > 0:
             render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, scroll_pos, render_config)
             render_properties(stdscr, ssh_config_data, hosts, render_config)
