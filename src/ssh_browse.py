@@ -11,6 +11,14 @@ import pwd
 import json
 import argparse
 
+class RenderConfig:
+    def __init__(self, col1_length, col2_length, spacer, top_margin, colors):
+        self.col1_length = col1_length
+        self.col2_length = col2_length
+        self.spacer = spacer
+        self.top_margin = top_margin
+        self.colors = colors
+
 # Wsl2 compatibility
 def get_ssh_config_location():
     id = os.getuid()
@@ -66,42 +74,41 @@ def get_help_text():
     ]
     return title, content
 
-def render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER):
-    stdscr.addstr(0, 4, 'Hosts', COL_HEADER)
-    stdscr.addstr(0, col1_length, 'Properties', COL_HEADER)
-    stdscr.addstr(0, col1_length + col2_length + spacer, 'Categories', COL_HEADER)
+def render_header(stdscr, config):
+    stdscr.addstr(0, 4, 'Hosts', config.colors['COL_HEADER'])
+    stdscr.addstr(0, config.col1_length, 'Properties', config.colors['COL_HEADER'])
+    stdscr.addstr(0, config.col1_length + config.col2_length + config.spacer, 'Categories', config.colors['COL_HEADER'])
 
-def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, scroll_pos, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW):
+def render_hosts(stdscr, hosts, ssh_config_data, selected_hosts, current_option, scroll_pos, config):
     for i, host in enumerate(hosts):
         if ssh_config_data[host].get('Reachable') == 'yes':
             pretext = 'o '
-            color = COL_ACTIVE
+            color = config.colors['COL_ACTIVE']
         elif ssh_config_data[host].get('Reachable') == 'no':
             pretext = 'x '
-            color = COL_INACTIVE
+            color = config.colors['COL_INACTIVE']
         elif ssh_config_data[host].get('Reachable') == 'pinging':
             pretext = '? '
-            color = COL_UNKNOWN
+            color = config.colors['COL_UNKNOWN']
         else:
             pretext = '> '
-            color = COL_UNKNOWN
+            color = config.colors['COL_UNKNOWN']
 
         if host in selected_hosts:
-            color = COL_SELECTION | curses.A_DIM if color == COL_INACTIVE else COL_SELECTION
-            #color = COL_SELECTION if color == COL_ACTIVE else COL_SELECTION | curses.A_DIM
+            color = config.colors['COL_SELECTION'] | curses.A_DIM if color == config.colors['COL_INACTIVE'] else config.colors['COL_SELECTION']
         
-        if i + top_margin < stdscr.getmaxyx()[0] - 1:
-            stdscr.addstr(i + top_margin, 4, pretext + host, color)
+        if i + config.top_margin < stdscr.getmaxyx()[0] - 1:
+            stdscr.addstr(i + config.top_margin, 4, pretext + host, color)
             if current_option == i + scroll_pos:
-                stdscr.addstr(i + top_margin, 1, '->', COL_ARROW)
+                stdscr.addstr(i + config.top_margin, 1, '->', config.colors['COL_ARROW'])
 
-def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES,COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE):
+def render_properties(stdscr, ssh_config_data, hosts, current_option, config):
     hostname = hosts[current_option]
     selected_host_config = ssh_config_data[hostname]
     propertylist = list(selected_host_config.keys())
     valuelist = list(selected_host_config.values())
-    hostcolor = COL_ACTIVE if selected_host_config.get('Reachable') == 'yes' else COL_INACTIVE if selected_host_config.get('Reachable') == 'no' else COL_UNKNOWN
-    stdscr.addstr(0 + top_margin, col1_length, hostname, hostcolor)
+    hostcolor = config.colors['COL_ACTIVE'] if selected_host_config.get('Reachable') == 'yes' else config.colors['COL_INACTIVE'] if selected_host_config.get('Reachable') == 'no' else config.colors['COL_UNKNOWN']
+    stdscr.addstr(0 + config.top_margin, config.col1_length, hostname, hostcolor)
 
     # Remove 'Category' and 'Reachable' from propertylist and valuelist
     if 'Category' in propertylist:
@@ -114,29 +121,29 @@ def render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin
         valuelist.pop(index)
         
     for i, (prop, val) in enumerate(zip(propertylist, valuelist)):
-        stdscr.addstr(i + 1 + top_margin, col1_length, f'{prop}: {val}', COL_PROPERTIES)
+        stdscr.addstr(i + 1 + config.top_margin, config.col1_length, f'{prop}: {val}', config.colors['COL_PROPERTIES'])
 
-def render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY):
+def render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, config):
     selected_host_category = ssh_config_data[hosts[current_option]]['Category']
-    max_lines = stdscr.getmaxyx()[0] - top_margin - 2
+    max_lines = stdscr.getmaxyx()[0] - config.top_margin - 2
     category_scroll_pos = (categories.index(selected_category) % max_lines) + 1 if categories.index(selected_category) >= max_lines else 0
 
     for i, category in enumerate(categories[category_scroll_pos:]):
-        color = COL_SELECTED_CATEGORY if category == selected_host_category or category == selected_category else COL_CATOGORY
-        if i + top_margin < stdscr.getmaxyx()[0] - 1:
-            stdscr.addstr(i + top_margin, col1_length + col2_length + spacer, f'{category_scroll_pos + i + 1}. {category}', color)
+        color = config.colors['COL_SELECTED_CATEGORY'] if category == selected_host_category or category == selected_category else config.colors['COL_CATOGORY']
+        if i + config.top_margin < stdscr.getmaxyx()[0] - 1:
+            stdscr.addstr(i + config.top_margin, config.col1_length + config.col2_length + config.spacer, f'{category_scroll_pos + i + 1}. {category}', color)
 
-def render_footer(stdscr, ssh_config_data, size, COL_FOOTER):
+def render_footer(stdscr, ssh_config_data, size, config):
     number_of_hosts = len(ssh_config_data)
     ssh_agent_running = 'yes' if os.environ.get('SSH_AUTH_SOCK') else 'no'
     hosts_online = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'yes'])
     hosts_offline = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'no'])
     hosts_unknown = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'unknown'])
     
-    stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", COL_FOOTER)
-    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", COL_FOOTER)
+    stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", config.colors['COL_FOOTER'])
+    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", config.colors['COL_FOOTER'])
 
-def render_help_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT, panel=None):
+def render_help_panel(stdscr, title, content, config, panel=None):
     size = stdscr.getmaxyx()
     win_height = len(content) + 4
     win_width = max(len(title), max(len(line) for line in content)) + 4
@@ -147,7 +154,7 @@ def render_help_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT
 
     if panel is None:
         win = curses.newwin(win_height, win_width, win_y, win_x)
-        win.bkgd(' ', COL_WINDOW)
+        win.bkgd(' ', config.colors['COL_ACTIVE'])
         win.box()
         panel = curses.panel.new_panel(win)
     else:
@@ -155,14 +162,14 @@ def render_help_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT
         win.erase()
         win.box()
 
-    win.addstr(1, (win_width - len(title)) // 2, title, COL_TITLE)
+    win.addstr(1, (win_width - len(title)) // 2, title, config.colors['COL_HEADER'])
 
     for i, line in enumerate(content):
-        win.addstr(3 + i, 2, line, COL_CONTENT)
+        win.addstr(3 + i, 2, line, config.colors['COL_ACTIVE'])
 
     return panel
 
-def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONTENT,x, width, height, panel=None):
+def render_preview_panel(stdscr, title, content, config, x, width, height, panel=None):
     size = stdscr.getmaxyx()
     win_height = height
     win_width = width   # Fixed width
@@ -171,7 +178,7 @@ def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONT
 
     if panel is None:
         win = curses.newwin(win_height, win_width, win_y, win_x)
-        win.bkgd(' ', COL_WINDOW)
+        win.bkgd(' ', config.colors['COL_ACTIVE'])
         win.box()
         panel = curses.panel.new_panel(win)
     else:
@@ -179,7 +186,7 @@ def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONT
         win.erase()
         win.box()
 
-    win.addstr(1, (win_width - len(title)) // 2, title, COL_TITLE)
+    win.addstr(1, (win_width - len(title)) // 2, title, config.colors['COL_HEADER'])
 
     # Cut lines to fit the window width
     wrapped_content = []
@@ -190,12 +197,12 @@ def render_preview_panel(stdscr, title, content, COL_WINDOW, COL_TITLE, COL_CONT
         wrapped_content.append(line)
 
     for i, line in enumerate(wrapped_content[:win_height - 4]):
-        win.addstr(3 + i, 2, line, COL_CONTENT)
+        win.addstr(3 + i, 2, line, config.colors['COL_ACTIVE'])
 
     win.box()
     return panel
 
-def render_search_panel(stdscr, title, COL_WINDOW, COL_TITLE, COL_CONTENT, panel=None):
+def render_search_panel(stdscr, title, config, panel=None):
     size = stdscr.getmaxyx()
     win_height = 3
     win_width = size[1] - 4
@@ -204,7 +211,7 @@ def render_search_panel(stdscr, title, COL_WINDOW, COL_TITLE, COL_CONTENT, panel
 
     if panel is None:
         win = curses.newwin(win_height, win_width, win_y, win_x)
-        win.bkgd(' ', COL_WINDOW)
+        win.bkgd(' ', config.colors['COL_ACTIVE'])
         win.box()
         panel = curses.panel.new_panel(win)
     else:
@@ -212,7 +219,7 @@ def render_search_panel(stdscr, title, COL_WINDOW, COL_TITLE, COL_CONTENT, panel
         win.erase()
         win.box()
 
-    win.addstr(1, 2, title, COL_TITLE)
+    win.addstr(1, 2, title, config.colors['COL_HEADER'])
 
     return panel
 
@@ -254,16 +261,6 @@ def main(stdscr, args):
     ping_on_startup = config.get('ping_on_startup', 'default_value')
     theme = Theme(config.get('theme', 'plain_theme'))
     fgcols = theme.init_colors()
-    COL_ACTIVE = fgcols['COL_ACTIVE']
-    COL_INACTIVE = fgcols['COL_INACTIVE'] # | curses.A_DIM
-    COL_UNKNOWN = fgcols['COL_UNKNOWN']
-    COL_HEADER = fgcols['COL_HEADER']
-    COL_ARROW = fgcols['COL_ARROW']
-    COL_PROPERTIES = fgcols['COL_PROPERTIES']
-    COL_SELECTED_CATEGORY = fgcols['COL_SELECTED_CATEGORY']
-    COL_CATOGORY = fgcols['COL_CATOGORY']
-    COL_FOOTER = fgcols['COL_FOOTER']
-    COL_SELECTION = fgcols['COL_SELECTION']
 
     curses.curs_set(0)
     curses.noecho()
@@ -294,9 +291,6 @@ def main(stdscr, args):
         ssh_config_location = config.get('ssh_config_location', get_ssh_config_location())
         ssh_config_data = ssh_hosts.read_ssh_config(ssh_config_location)
 
-    if ping_on_startup == 'true':
-        ssh_hosts.check_reachable_all(ssh_config_data, False)
-
     # Calculate the preferred column 1 length and set default column lengths
     top_margin, col1_length, col2_length, spacer = 2, 10, 20, 10
     for k in ssh_config_data.keys():
@@ -318,10 +312,27 @@ def main(stdscr, args):
     max_length = stdscr.getmaxyx()[1]
     col2_length = min(preferrable_col2_length, max_length - longest_category - col1_length - spacer - 5)
 
+    # Setup the rendering configuration
+    render_config = RenderConfig(col1_length, col2_length, spacer, top_margin, {
+        'COL_ACTIVE': fgcols['COL_ACTIVE'],
+        'COL_INACTIVE': fgcols['COL_INACTIVE'],
+        'COL_UNKNOWN': fgcols['COL_UNKNOWN'],
+        'COL_HEADER': fgcols['COL_HEADER'],
+        'COL_ARROW': fgcols['COL_ARROW'],
+        'COL_PROPERTIES': fgcols['COL_PROPERTIES'],
+        'COL_SELECTED_CATEGORY': fgcols['COL_SELECTED_CATEGORY'],
+        'COL_CATOGORY': fgcols['COL_CATOGORY'],
+        'COL_FOOTER': fgcols['COL_FOOTER'],
+        'COL_SELECTION': fgcols['COL_SELECTION']
+    })
+
     current_option = 0
     categories.insert(0, 'All')
     selected_category = 'All'
     marked_hosts = []
+
+    if ping_on_startup == 'true':
+        ssh_hosts.check_reachable_all(ssh_config_data, False)
 
     while True:
         hosts = get_hosts_to_display(ssh_config_data, selected_category, search_filter)
@@ -329,21 +340,22 @@ def main(stdscr, args):
         size = os.get_terminal_size()
         last_option = current_option
 
-        render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER)
+        #render_header(stdscr, col1_length, col2_length, spacer, COL_HEADER)
+        render_header(stdscr, render_config)
         max_lines = size.lines - top_margin - 2
         current_option = min(current_option, len(hosts) - 1)
         scroll_pos = (current_option % max_lines) + 1 if current_option >= max_lines else 0
 
         if len(hosts) > 0:
-            render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, scroll_pos, top_margin, COL_ACTIVE, COL_INACTIVE, COL_UNKNOWN, COL_SELECTION, COL_ARROW)
-            render_properties(stdscr, ssh_config_data, hosts, current_option, top_margin, col1_length, COL_PROPERTIES, COL_UNKNOWN, COL_ACTIVE, COL_INACTIVE)
+            render_hosts(stdscr, hosts[scroll_pos:], ssh_config_data, marked_hosts, current_option, scroll_pos, render_config)
+            render_properties(stdscr, ssh_config_data, hosts, current_option, render_config)
         
-            render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, top_margin, col1_length, col2_length, spacer, COL_SELECTED_CATEGORY, COL_CATOGORY)
-        render_footer(stdscr, ssh_config_data, size, COL_FOOTER)
+            render_categories(stdscr, ssh_config_data, hosts, current_option, categories, selected_category, render_config)
+        render_footer(stdscr, ssh_config_data, size, render_config)
         
         if help_panel_visible:
             title, content = get_help_text()
-            help_panel = render_help_panel(stdscr, title, content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, help_panel)
+            help_panel = render_help_panel(stdscr, title, content, render_config, help_panel)
         else:
             if help_panel:
                 help_panel.hide()
@@ -352,14 +364,14 @@ def main(stdscr, args):
         if preview_panel_visible:
             win_length = size.columns - col1_length - 4
             win_height = size.lines - 4
-            preview_panel = render_preview_panel(stdscr, "Notes preview", preview_content, COL_ACTIVE, COL_HEADER, COL_ACTIVE, col1_length, win_length, win_height, preview_panel)
+            preview_panel = render_preview_panel(stdscr, "Notes preview", preview_content, render_config, col1_length, win_length, win_height, preview_panel)
         else:
             if preview_panel:
                 preview_panel.hide()
                 preview_panel = None
 
         if search_panel_visible:
-            search_panel = render_search_panel(stdscr, f"Search: {search_filter}", COL_ACTIVE, COL_HEADER, COL_ACTIVE, search_panel)
+            search_panel = render_search_panel(stdscr, f"Search: {search_filter}", render_config, search_panel)
         else:
             if search_panel:
                 search_panel.hide()
@@ -417,7 +429,7 @@ def main(stdscr, args):
                 exit_command = f'ssh {hostname}'
                 break
             else:
-                stdscr.addstr(size.lines - 1, 1, f"Host {hostname} is not reachable", COL_FOOTER)
+                stdscr.addstr(size.lines - 1, 1, f"Host {hostname} is not reachable", render_config.color['COL_FOOTER'])
         elif action >= ord('1') and action <= ord('9'):
             selected_category = categories[action - ord('1')]
         elif action == ord('t'):
