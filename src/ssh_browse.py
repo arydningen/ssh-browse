@@ -34,6 +34,8 @@ def get_hosts_to_display(ssh_config_data, selected_category, search_filter):
             continue
         if search_filter.lower() in k.lower():
             hosts.append(k)
+        elif search_filter.lower() in v['HostName'].lower():
+            hosts.append(k)
     return hosts
 
 def get_preview_content(filename):
