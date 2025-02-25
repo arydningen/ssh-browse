@@ -90,9 +90,20 @@ def get_categories(ssh_config_data) -> list:
 
 def check_reachable(config) -> bool:
     ip = config['HostName']
-    command = f'ssh -o BatchMode=yes -o ConnectTimeout=5 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no {ip} 2>&1 | fgrep -q "Permission denied"; echo $?'
+    command = f'ssh -o BatchMode=yes -o ConnectTimeout=3 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no'
+
+    if 'KexAlgorithms' in config:
+        kex = config['KexAlgorithms']
+        command += f' -o KexAlgorithms={kex}'
+    
+    if 'HostKeyAlgorithms' in config:
+        host_key = config['HostKeyAlgorithms']
+        command += f' -o HostKeyAlgorithms={host_key}'
+    
+    command += f' {ip} 2>&1 | fgrep -q "Permission denied"; echo $?'
+    
     reachable = int(subprocess.check_output(command, shell=True))  
-    if (reachable == 0):
+    if reachable == 0:
         config['Reachable'] = 'yes' 
         return True
     
