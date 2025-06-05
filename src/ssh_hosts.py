@@ -5,6 +5,10 @@ import threading
 import argparse
 import pwd
 import json
+#import logging
+
+# Configure logging
+#logging.basicConfig(filename='ssh_check.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Used to remove dupes while keeping order
 def uniqify(seq):
@@ -88,17 +92,19 @@ def get_categories(ssh_config_data) -> list:
     categories = uniqify(categories)
     return categories
 
-def check_reachable(config) -> bool:
-    ip = config['HostName']
+def check_reachable(hostconfig) -> bool:
+    host = hostconfig.get('HostName', "")  
+
     command = f'ssh -o BatchMode=yes -o ConnectTimeout=3 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no'
-    command += f' {ip} 2>&1 | fgrep -q "Permission denied"; echo $?'
+    command += f' {host} 2>&1 | fgrep -q "Permission denied"; echo $?'
     
-    reachable = int(subprocess.check_output(command, shell=True))  
+    #logging.debug(f"Command: {command}")
+    reachable = int(subprocess.check_output(command, shell=True))
     if reachable == 0:
-        config['Reachable'] = 'yes' 
+        hostconfig['Reachable'] = 'yes'
         return True
     
-    config['Reachable'] = 'no'
+    hostconfig['Reachable'] = 'no'
     return False
 
 def check_reachable_all(ssh_config_data, wait):

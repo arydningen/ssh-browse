@@ -51,13 +51,15 @@
 #### v0.5.7
 **Bug Fixes:**
 - Fixed bug! Program crashed if category list exceeded bounds.
-- Fixed bug! Scrolling more than max_lines caused a problem
+- Fixed bug! Scrolling more than max_lines caused a problem.
 
 **Changes:**
 - Impoved column size calculations.
 - Pressing ESC while searchpanel is visible closes it and clears the searchfilter.
 - Searchfilter now also applies to hostname value.
+- Using renderconfig class instead of global variables.
 
 **New Features:**
 - Can import hosts from JSON file.
 - Scrolling categories.
+- Version command line argument (-v --version).

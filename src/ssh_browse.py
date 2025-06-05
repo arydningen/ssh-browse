@@ -63,7 +63,7 @@ def get_help_text():
         "Up/Down - Navigate hosts",
         "Left/Right - Change category",
         "1-9 - Select category",
-        "a - Ping all hosts",
+        "a - Ping visible hosts",
         "p - Ping selected hosts",
         "h - Toggle help",
         "n - Toggle notes",
@@ -488,5 +488,6 @@ if __name__ == "__main__":
     msg = 'SSH Browse'
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--importJSON', help='Import hosts from JSON file')
+    parser.add_argument('-v', '--version', action='version', version=f'{msg} 0.5.7b')
     args = parser.parse_args()
     curses.wrapper(main, args)
