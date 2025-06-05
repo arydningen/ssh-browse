@@ -19,6 +19,8 @@ class RenderConfig:
         self.top_margin = top_margin
         self.colors = colors
         self.selected_host = selected_host
+        self.footer_height = 1
+
 
 # Wsl2 compatibility
 def get_ssh_config_location():
@@ -124,16 +126,16 @@ def render_properties(stdscr, ssh_config_data, hosts, config):
     for i, (prop, val) in enumerate(zip(propertylist, valuelist)):
         stdscr.addstr(i + 1 + config.top_margin, config.col1_length, f'{prop}: {val}', config.colors['COL_PROPERTIES'])
 
-def render_categories(stdscr, ssh_config_data, hosts, categories, selected_category, config):
-    selected_host_category = ssh_config_data[hosts[config.selected_host]]['Category']
-    max_lines = stdscr.getmaxyx()[0] - config.top_margin - 2
+def render_categories(stdscr, ssh_config_data, hosts, categories, selected_category, render_config):
+    selected_host_category = ssh_config_data[hosts[render_config.selected_host]]['Category']
+    max_lines = stdscr.getmaxyx()[0] - render_config.top_margin - render_config.footer_height
     selected_host_category_index = categories.index(selected_host_category)
     category_scroll_pos = max(0, selected_host_category_index - max_lines + 1) if selected_host_category_index >= max_lines else 0
 
     for i, category in enumerate(categories[category_scroll_pos:]):
-        color = config.colors['COL_SELECTED_CATEGORY'] if category == selected_host_category or category == selected_category else config.colors['COL_CATOGORY']
-        if i + config.top_margin < stdscr.getmaxyx()[0] - 1:
-            stdscr.addstr(i + config.top_margin, config.col1_length + config.col2_length + config.spacer, f'{category_scroll_pos + i + 1}. {category}', color)
+        color = render_config.colors['COL_SELECTED_CATEGORY'] if category == selected_host_category or category == selected_category else render_config.colors['COL_CATOGORY']
+        if i + render_config.top_margin < stdscr.getmaxyx()[0] - 1:
+            stdscr.addstr(i + render_config.top_margin, render_config.col1_length + render_config.col2_length + render_config.spacer, f'{category_scroll_pos + i + 1}. {category}', color)
 
 def render_footer(stdscr, ssh_config_data, size, config):
     ssh_agent_running = 'yes' if os.environ.get('SSH_AUTH_SOCK') else 'no'
@@ -141,8 +143,8 @@ def render_footer(stdscr, ssh_config_data, size, config):
     hosts_offline = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'no'])
     hosts_unknown = len([host for host in ssh_config_data if ssh_config_data[host].get('Reachable') == 'unknown'])
     
-    stdscr.addstr(size.lines - 1, 1, "<enter> - connect | h - help | q - quit", config.colors['COL_FOOTER'])
-    stdscr.addstr(size.lines - 2, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running}", config.colors['COL_FOOTER'])
+    #stdscr.addstr(size.lines - 2, 1, "<enter> - connect | h - help | q - quit", config.colors['COL_FOOTER'])
+    stdscr.addstr(size.lines - 1, 1, f"Online: {hosts_online}, Offline: {hosts_offline}, Unknown: {hosts_unknown}, Agent: {ssh_agent_running} (Press h for help)", config.colors['COL_FOOTER'])
 
 def render_help_panel(stdscr, title, content, config, panel=None):
     size = stdscr.getmaxyx()
@@ -207,7 +209,7 @@ def render_search_panel(stdscr, title, config, panel=None):
     size = stdscr.getmaxyx()
     win_height = 3
     win_width = size[1] - 4
-    win_y = size[0] - win_height - 2
+    win_y = size[0] - win_height - config.footer_height
     win_x = 2
 
     if panel is None:
@@ -343,7 +345,7 @@ def main(stdscr, args):
 
         render_header(stdscr, render_config)
 
-        max_lines = size.lines - top_margin - 2
+        max_lines = size.lines - top_margin - render_config.footer_height
         scroll_pos = max(0, render_config.selected_host - max_lines + 1) if render_config.selected_host >= max_lines else 0
         render_config.selected_host = min(render_config.selected_host, len(hosts) - 1)
         if len(hosts) > 0:

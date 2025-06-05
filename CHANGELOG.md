@@ -58,6 +58,7 @@
 - Pressing ESC while searchpanel is visible closes it and clears the searchfilter.
 - Searchfilter now also applies to hostname value.
 - Using renderconfig class instead of global variables.
+- Reducing footer to one line.
 
 **New Features:**
 - Can import hosts from JSON file.
