@@ -72,6 +72,7 @@ def get_help_text():
         "s - Search panel",
         "e - Edit notes",
         "t - Tmux hosts",
+        "w - Tmux windows (nested)",
         "d - Run demo or die",
         "q - Quit"
     ]
@@ -435,6 +436,9 @@ def main(stdscr, args):
             selected_category = categories[action - ord('1')]
         elif action == ord('t'):
             tmux_split.open_ssh_hosts(marked_hosts)
+            marked_hosts = []
+        elif action == ord('w'):
+            tmux_split.open_nested_tmux_windows(marked_hosts)
             marked_hosts = []
         elif action == ord('d'):
             tmux_split.demo()

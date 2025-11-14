@@ -33,6 +33,23 @@ def demo():
     #commands.append('ssh Space dockerbuntu Enter')
     open_in_tmux('ssh1', commands)
 
+def open_nested_tmux_windows(hosts):
+    """
+    Opens separate tmux windows for each host, connects via SSH, and starts nested tmux.
+    Each window is named after the host.
+    The command tries to attach to an existing session first, or creates a new one if none exists.
+    """
+    for host in hosts:
+        # Create a new window with the host name
+        os.system(f'tmux new-window -n {host}')
+        # Send SSH command and then start tmux on the remote host
+        os.system(f'tmux send-keys -t {host} "ssh {host}" Enter')
+        # Wait a moment for SSH connection to establish
+        time.sleep(1.5)
+        # Try to attach to existing tmux session, or create new one if it doesn't exist
+        # The "# " comment helps prevent issues if tmux attach fails
+        os.system(f'tmux send-keys -t {host} "tmux a # 2>/dev/null || tmux" Enter')
+
 def command_to_sendkeys(command) -> str:
     s = command.split(' ')
     s = ' Space '.join(s)
@@ -43,6 +60,7 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", help = "starts each command in a separate pane")
+    parser.add_argument("-w", "--windows", nargs='+', help = "creates separate tmux windows with nested tmux for each host")
 
     args = parser.parse_args()
         
@@ -58,3 +76,5 @@ if __name__ == '__main__':
             print("Error could not load file!")
         finally:
             open_in_tmux('ssh', commands)
+    elif args.windows:
+        open_nested_tmux_windows(args.windows)
