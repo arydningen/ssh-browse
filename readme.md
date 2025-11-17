@@ -1,4 +1,4 @@
-## SSH Browse v0.5.7b
+## SSH Browse v0.5.7
 Utility for browsing ssh hosts in the terminal.
 
 It has currently only been tested on Ubuntu 18.04 and up.
@@ -16,7 +16,7 @@ Optional (extended functionality):
 - [cmatrix](https://github.com/abishekvashok/cmatrix)
 
 
-## Installation
+## Installation / Update
 Navigate to the git repository directory and run:
 ```bash
 ./install.sh

@@ -490,10 +490,13 @@ def main(stdscr, args):
     if exit_command:
         atexit.register(os.system, exit_command)
 
+def get_current_version():
+    return '0.5.7'
+
 if __name__ == "__main__":
     msg = 'SSH Browse'
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--importJSON', help='Import hosts from JSON file')
-    parser.add_argument('-v', '--version', action='version', version=f'{msg} 0.5.7b')
+    parser.add_argument('-v', '--version', action='version', version=f'{msg} {get_current_version()}')
     args = parser.parse_args()
     curses.wrapper(main, args)
