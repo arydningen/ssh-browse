@@ -96,7 +96,7 @@ def check_reachable(hostconfig) -> bool:
     host = hostconfig.get('HostName', "")  
 
     command = f'ssh -o BatchMode=yes -o ConnectTimeout=3 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no -o StrictHostKeyChecking=no'
-    command += f' {host} 2>&1 | fgrep -q "Permission denied"; echo $?'
+    command += f' {host} 2>&1 | grep -F -q "Permission denied"; echo $?'
     
     #logging.debug(f"Command: {command}")
     reachable = int(subprocess.check_output(command, shell=True))

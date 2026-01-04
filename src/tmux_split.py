@@ -1,6 +1,14 @@
 import os
 import time
 import argparse
+import re
+
+def sanitize_hostname(hostname):
+    """
+    Sanitize hostname for use as tmux window name by replacing problematic characters.
+    """
+    # Replace periods, colons, and other problematic characters with underscores
+    return re.sub(r'[.:]', '_', hostname)
 
 def open_in_tmux(name, commands):
     # Get the pane-base-index setting (oh-my-tmux has base-index at 1)
@@ -36,19 +44,21 @@ def demo():
 def open_nested_tmux_windows(hosts):
     """
     Opens separate tmux windows for each host, connects via SSH, and starts nested tmux.
-    Each window is named after the host.
+    Each window is named after the host (sanitized for tmux compatibility).
     The command tries to attach to an existing session first, or creates a new one if none exists.
     """
     for host in hosts:
-        # Create a new window with the host name
-        os.system(f'tmux new-window -n {host}')
+        # Sanitize hostname for use as tmux window name
+        window_name = sanitize_hostname(host)
+        # Create a new window with the sanitized host name
+        os.system(f'tmux new-window -n {window_name}')
         # Send SSH command and then start tmux on the remote host
-        os.system(f'tmux send-keys -t {host} "ssh {host}" Enter')
+        os.system(f'tmux send-keys -t {window_name} "ssh {host}" Enter')
         # Wait a moment for SSH connection to establish
         time.sleep(1.5)
         # Try to attach to existing tmux session, or create new one if it doesn't exist
         # The "# " comment helps prevent issues if tmux attach fails
-        os.system(f'tmux send-keys -t {host} "tmux a # 2>/dev/null || tmux" Enter')
+        os.system(f'tmux send-keys -t {window_name} "tmux a # 2>/dev/null || tmux" Enter')
 
 def command_to_sendkeys(command) -> str:
     s = command.split(' ')

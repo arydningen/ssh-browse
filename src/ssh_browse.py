@@ -491,7 +491,7 @@ def main(stdscr, args):
         atexit.register(os.system, exit_command)
 
 def get_current_version():
-    return '0.5.7'
+    return '0.5.8'
 
 if __name__ == "__main__":
     msg = 'SSH Browse'

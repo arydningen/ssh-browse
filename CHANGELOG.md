@@ -64,3 +64,11 @@
 - Can import hosts from JSON file.
 - Scrolling categories.
 - Version command line argument (-v --version).
+
+#### v0.5.8
+**Bug Fixes:**
+- Fixed bug! Program used deprecated `fgrep`, now uses `grep -F` instead.
+- Fixed bug! Tmux windows can't have . in their names.
+
+**New Features:**
+- Basic support for Fedora

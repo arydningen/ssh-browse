@@ -1,4 +1,4 @@
-## SSH Browse v0.5.7
+## SSH Browse v0.5.8
 Utility for browsing ssh hosts in the terminal.
 
 It has currently only been tested on Ubuntu 18.04 and up.
